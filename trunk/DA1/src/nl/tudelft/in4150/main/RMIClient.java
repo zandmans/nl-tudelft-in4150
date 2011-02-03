@@ -14,7 +14,8 @@ import java.rmi.*;
 import java.rmi.registry.*;
 
 
-public class RMIClient {
+public class RMIClient
+{
 
 	/**
 	 * Set server settings and send a message

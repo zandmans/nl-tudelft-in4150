@@ -10,6 +10,7 @@
 
 package nl.tudelft.in4150.main;
 
-public class RMIMessage {
+public class RMIMessage
+{
 
 }
