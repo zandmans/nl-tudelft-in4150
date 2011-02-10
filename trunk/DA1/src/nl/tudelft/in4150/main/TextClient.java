@@ -14,72 +14,53 @@ import nl.tudelft.in4150.objects.*;
 public class TextClient implements Runnable, IMessageReceivedHandler {
 
 	private boolean useSynchronizedSocket = true;
-	
-	/* Unique identifier of this text client */
-	private static int uniqueID = 0; 	
-	/* Local URL */
-	private String id;
-	/* Time it takes for a message to be send */
-	private int customDelay;
-	/* Running state of the text client */
-	private boolean running;
-	/* A random number generator */
-	private Random random = new Random(System.currentTimeMillis());
-	/* Socket over which to send data */
-	private Socket socket;
-	
-	/**
-	 * @return a unique identifier, identifying this
-	 * textclient.
+    private int clientID;           /* Unique identifier of this text client */
+	private String id;              /* Local URL */
+	private int customDelay;        /* Time it takes for a message to be send */
+	private boolean running;        /* Running state of the text client */
+	private Random random = new Random(System.currentTimeMillis());/* A random number generator */
+	private Socket socket;          /* Socket over which to send data */
+
+    // TODO: Implement Lamport clocks
+
+    /**
+	 * Create a new textclient, utilizing a random delay.
+	 *
+	 * @param ClientID
 	 */
-	private synchronized static int getUniqueID() {
-		return uniqueID++;
-	}
-	
-	/**
-	 * Create a new textclient, utilizing a
-	 * random delay.
-	 * 
-	 * @param delay it takes to send a message
-	 * to a random machine.
-	 */
-	public TextClient(int delay)
-	{
-		super();
-		
+	public TextClient(int ClientID) {
+        super();
+        this.clientID = ClientID;
+
 		//LocalSocket ls = new LocalSocket();
 		RMISocket ls = new RMISocket();
-		
-		id = ""+(TextClient.getUniqueID());
-		
-		if (useSynchronizedSocket)
-			socket = new SynchronizedSocket(ls);
-		else
-			socket = ls;
-		
-		ls.register(id);
-		socket.addMessageReceivedHandler(this);		
 
-		customDelay = delay;
-				
-		new Thread(this).start();
-	}
-	
+		id = ""+ClientID;
+
+		if (useSynchronizedSocket)  socket = new SynchronizedSocket(ls);
+		else                        socket = ls;
+
+		ls.register(id);
+		this.socket.addMessageReceivedHandler(this);
+
+		this.customDelay = Config.CLIENT_DELAY[ClientID];
+
+        new Thread(this).start();
+        Config.CLIENT_INIT = Math.max(Config.CLIENT_INIT, ClientID);
+    }
+
 	/**
-	 * Repeat the process of sending a 
+	 * Repeat the process of sending a
 	 * message to a random node and then
 	 * sleeping for a given delay time.
 	 */
 	public void run()
 	{
-		running = true;
-		
-		try {
-			Thread.sleep(500);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		
+		this.running = true;
+
+        // Wait for intializement
+        try { Thread.sleep(500); } catch (InterruptedException e) { e.printStackTrace(); }
+
 		while(running)
 		{
 			try {
@@ -87,33 +68,35 @@ public class TextClient implements Runnable, IMessageReceivedHandler {
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
-			
+
 			/**
 			 * Show a message when it is being send.
 			 */
 			Message m = new Message();
-			int tgt = Math.abs(random.nextInt() % uniqueID);
-			System.out.println("SND TO "+tgt+" FRM "+id+" MSGID " + m.getMessageID());
-			socket.sendMessage(m, String.valueOf(tgt));			
-		}
-		
+			//int target = Math.abs(random.nextInt() % Config.CLIENT_INIT-1);
+            System.out.println("BROADCASTING FROM "+id+" WITH MESSAGE ID "+m.getMessageID());
+            for(int i = 0; i < Config.CLIENT_COUNT; ++i) {
+                //System.out.println("SND TO "+i+" FRM "+id+" MSGID " + m.getMessageID());
+                socket.sendMessage(m, String.valueOf(i));
+            }
+        }
+
 		socket.unRegister();
 	}
-	
+
 	/**
 	 * Create three textclients.
 	 */
-	public static void main(String[] args)
-	{
-		for(int i = 0; i < 3; ++i) 
-			new TextClient(100*(i+1));
-	}
+	public static void main(String[] args) {
+		for(int i = 0; i < Config.CLIENT_COUNT; ++i)  new TextClient(i);
+    }
 
 	/**
 	 * Show data when it is received.
 	 */
-	public void onMessageReceived(Message message) {	
-		System.out.println("REC AT "+id+" MSGID "+message.getMessageID());
+	public void onMessageReceived(Message message) {
+        // TODO: Implement some reply mechanism here.
+        System.out.println("REC AT "+id+" MSGID "+message.getMessageID());
 	}
-	
+
 }
