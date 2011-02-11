@@ -4,13 +4,12 @@ import java.util.HashMap;
 import java.util.Arrays;
 import java.io.Serializable;
 
-/**
- * User: njong
- * Date: 11-feb-2011
- */
+enum VectorComparison {
+	GREATER, EQUAL, SMALLER, SIMULTANEOUS
+}
+
 public class VectorClock extends HashMap<String, Integer> implements Serializable {
-	// Unique Serial.
-	private static final long serialVersionUID = 6668164199894268488L;
+	private static final long serialVersionUID = 6668164199894268488L;// Unique Serial.
 
 	/**
 	 * Increases the component of pUnit by 1.
@@ -177,8 +176,4 @@ public class VectorClock extends HashMap<String, Integer> implements Serializabl
 			return VectorComparison.SIMULTANEOUS;
 		}
 	}
-}
-
-enum VectorComparison {
-	GREATER, EQUAL, SMALLER, SIMULTANEOUS
 }
