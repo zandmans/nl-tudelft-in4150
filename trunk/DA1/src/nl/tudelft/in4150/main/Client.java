@@ -4,12 +4,15 @@
  */
 package nl.tudelft.in4150.main;
 
+import java.util.ArrayList;
+import java.util.List;
 import nl.tudelft.in4150.objects.*;
 
 public class Client implements Runnable, IMessageReceivedHandler {
 	private int clientID;		 /* Unique identifier of this text client */
 	private boolean running; /* Running state of the text client */
 	private Socket socket;	 /* Socket over which to send data */
+	private List<Message> buffer;	/* The buffer where buffered message will be saved */
 
 	/** Transfroms internal client ID to string representation (Client URL). */
 	public static String transformIDtoURL(int id) {
@@ -28,6 +31,8 @@ public class Client implements Runnable, IMessageReceivedHandler {
 		if (Config.useSynchronizedSockets) this.socket = new SynchronizedSocket(this.socket);
 		this.socket.register(transformIDtoURL(this.clientID));
 		this.socket.addMessageReceivedHandler(this);
+		
+		this.buffer = new ArrayList<Message>();
 
 		new Thread(this).start();
 		Config.CLIENT_INIT = Math.max(Config.CLIENT_INIT, ClientID); // Let all others know this new client exists. (Simple version)
@@ -60,6 +65,28 @@ public class Client implements Runnable, IMessageReceivedHandler {
 	public void onMessageReceived(Message message) {
 		// TODO: Implement some reply mechanism here.
 		System.out.println("REC AT " + this.clientID + " MSGID " + message.getMessageID());
+		
+		boolean expected = true;	/* This is the condition to state if the right message is received (V + ej >= Vm) */ 
+		if(expected) {
+			this.deliver(message);
+			this.processBuffer();
+		}
+		else
+			this.buffer.add(message);
+	}
+	
+	/** Process the message */
+	public void deliver(Message message) {
+		// TODO: Implement a procedure done after receiving the right message
+		System.out.println("MSGID " + message.getMessageID() + " processed by " + this.clientID);
+	}
+	
+	/** Check the buffer for messages which could be delivered */
+	public void processBuffer() {
+		boolean expected = true;	/* This is the condition to state if the right message is received (V + ej >= Vm) */
+		for(Message m : this.buffer) /* Check all the messages in the buffer */
+			if(expected) /* The condition for delivering the message from the buffer */
+				deliver(m);
 	}
 
 	/** Create multiple clients, based on configuration */
