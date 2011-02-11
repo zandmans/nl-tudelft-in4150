@@ -10,5 +10,7 @@ public class Config {
 	public static int CLIENT_INIT = 0;
 	public static int[] CLIENT_DELAY = {100, 200, 300, 400, 500};
 
-	public static boolean useSynchronizedSockets = true;
+	public static int lastMsgID = 0;
+
+	public static int REGISTRY_PORT = 1099;
 }
