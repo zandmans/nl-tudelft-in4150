@@ -54,15 +54,15 @@ public class Client implements Runnable, IMessageReceivedHandler {
 
 	/** Broadcasts a message to all known clients, and outputs a notification. */
 	public void broadcastMessage(Message m) {
-		System.out.println("BROADCASTING FROM " + this.id + " TO CLIENTS 0-" + (Config.CLIENT_COUNT - 1) + " WITH MESSAGE ID " + m.getMessageID());
+		System.out.println("BROADCASTING FROM " + this.clientID + " TO CLIENTS 0-" + (Config.CLIENT_COUNT - 1) + " WITH MESSAGE ID " + m.getMessageID());
 		for (int i = 0; i < Config.CLIENT_COUNT; i++)
-			socket.sendMessage(m, String.valueOf(i));
+			socket.sendMessage(m, transformIDtoURL(i));
 	}
 
 	/** Show data when it is received. */
 	public void onMessageReceived(Message message) {
 		// TODO: Implement some reply mechanism here.
-		System.out.println("REC AT " + id + " MSGID " + message.getMessageID());
+		System.out.println("REC AT " + this.clientID + " MSGID " + message.getMessageID());
 	}
 
 	/** Create multiple clients, based on configuration */
