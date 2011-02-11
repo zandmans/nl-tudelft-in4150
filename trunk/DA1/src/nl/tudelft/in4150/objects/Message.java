@@ -15,10 +15,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * A message is the actual data unit, which is
- * transmitted over the transport layer.
- * This contains both the actual data and relevent
- * metadata (time this was send, etc).
+ * A message is the actual data unit, which is transmitted over the transport layer.
+ * This contains both the actual data and relevent metadata (time this was send, etc).
  */
 @SuppressWarnings("serial")
 public class Message implements Serializable {
@@ -32,10 +30,7 @@ public class Message implements Serializable {
 	private static final String ID_URL = "*URL";
 
 	/**
-	 * Construct a message, assign a unique message
-	 * ID (according to the current JVM) and assign
-	 * the time at which this message was sent.
-	 *
+	 * Construct a message, assign a unique message ID (according to the current JVM) and assign the time at which this message was sent.
 	 * @pre none
 	 * @post message hasBeenSend state is false
 	 */
@@ -45,40 +40,27 @@ public class Message implements Serializable {
 		dataElements.put(ID_SENDTIME, -1.0);
 	}
 
-	/**
-	 * @return a unique threadsafe identifier,
-	 *         identifying the message.
-	 */
+	/** @return a unique threadsafe identifier, identifying the message. */
 	private static synchronized int getNewMessageID() {
 		return ++messageIDs;
 	}
 
 	/**
-	 * Call this when the message is about to be
-	 * send.
-	 *
+	 * Call this when the message is about to be send.
 	 * @throws MessageHasAlreadyBeenSendException
-	 *          when the message has
-	 *          already been sent.
+	 *          when the message has already been sent.
 	 * @pre message has not been sent
 	 * @post message has been sent, sendTime has been updated.
 	 */
 	public void send(String URL) {
-		/*
-        if ((Double)dataElements.get(ID_SENDTIME) != -1)
-			throw new MessageHasAlreadyBeenSendException();
-	    */
-
 		dataElements.put(ID_SENDTIME, SocketMonitor.getInstance().getTime());
 		dataElements.put(ID_URL, URL);
 	}
 
 	/**
 	 * Return the time at which the message has been sent.
-	 *
 	 * @return the time at which the message has been sent.
-	 * @throws MessageHasNotBeenSendException when the message has
-	 *                                        not been send yet (so there is no actual sendtime).
+	 * @throws MessageHasNotBeenSendException when the message has not been send yet (so there is no actual sendtime).
 	 * @pre Message has been send.
 	 */
 	public double getSendTime() {
@@ -88,30 +70,23 @@ public class Message implements Serializable {
 		return (Double) dataElements.get(ID_SENDTIME);
 	}
 
-	/**
-	 * @return true iff the message has been sent.
-	 */
+	/** @return true iff the message has been sent. */
 	public boolean hasBeenSent() {
 		return (Double) dataElements.get(ID_SENDTIME) != -1;
 	}
 
-	/**
-	 * @return the unique message id.
-	 */
+	/** @return the unique message id. */
 	public int getMessageID() {
 		return (Integer) dataElements.get(ID_MESSAGEID);
 	}
 
-	/**
-	 * @return target URL.
-	 */
+	/** @return target URL. */
 	public String getURL() {
 		return (String) dataElements.get(ID_URL);
 	}
 
 	/**
 	 * Insert an element in the dataset.
-	 *
 	 * @param key	 identifier of the hashmap.
 	 * @param value replacing the old value of the key.
 	 */
@@ -121,7 +96,6 @@ public class Message implements Serializable {
 
 	/**
 	 * Retrieve an element from the dataset.
-	 *
 	 * @param key identifier.
 	 * @return the value at the key position.
 	 */

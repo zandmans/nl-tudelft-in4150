@@ -1,6 +1,8 @@
-package nl.tudelft.in4150.main;
+/**
+ * @author N. de Jong
+ */
 
-import nl.tudelft.in4150.objects.Message;
+package nl.tudelft.in4150.objects;
 
 import java.rmi.Remote;
 

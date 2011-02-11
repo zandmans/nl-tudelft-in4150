@@ -1,6 +1,7 @@
-package nl.tudelft.in4150.main;
-
-import nl.tudelft.in4150.objects.Message;
+/**
+ * @author N. de Jong
+ */
+package nl.tudelft.in4150.objects;
 
 import java.rmi.server.UnicastRemoteObject;
 

@@ -7,10 +7,7 @@
  */
 package nl.tudelft.in4150.exception;
 
-/**
- * This exception is thrown when the socket monitor
- * hasn't been paused yet.
- */
+/** This exception is thrown when the socket monitor hasn't been paused yet. */
 @SuppressWarnings("serial")
 public class NotPausedException extends RuntimeException {
 
