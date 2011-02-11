@@ -4,12 +4,19 @@
  */
 package nl.tudelft.in4150.main;
 
+import java.util.List;
+import java.util.ArrayList;
+
 public class TestClient extends RMIClient implements Runnable {
 	private boolean running; /* Running state of the text client */
+	private List<Message> buffer;	/* The buffer where buffered message will be saved */
 
 	/** Create a new client */
 	public TestClient(int clientID) throws java.rmi.RemoteException {
 		super(clientID);
+
+		this.buffer = new ArrayList<Message>();
+		
 		new Thread(this).start();
 		Config.CLIENT_INIT = Math.max(Config.CLIENT_INIT, clientID); // Let all others know this new client exists. (Simple version)
 	}
@@ -39,6 +46,28 @@ public class TestClient extends RMIClient implements Runnable {
 	public void onMessageReceived(Message message) {
 		// TODO: Implement some reply mechanism here.
 		System.out.println("REC AT " + this.clientID + " MSGID " + message.messageID);
+
+		boolean expected = true;	/* This is the condition to state if the right message is received (V + ej >= Vm) */
+		if(expected) {
+			this.deliver(message);
+			this.processBuffer();
+		}
+		else
+			this.buffer.add(message);
+	}
+
+	/** Process the message */
+	public void deliver(Message message) {
+		// TODO: Implement a procedure done after receiving the right message
+		System.out.println("MSGID " + message.messageID + " processed by " + this.clientID);
+	}
+
+	/** Check the buffer for messages which could be delivered */
+	public void processBuffer() {
+		boolean expected = true;	/* This is the condition to state if the right message is received (V + ej >= Vm) */
+		for(Message m : this.buffer) /* Check all the messages in the buffer */
+			if(expected) /* The condition for delivering the message from the buffer */
+				deliver(m);
 	}
 
 	/** Create multiple clients, based on configuration */
