@@ -7,10 +7,7 @@
  */
 package nl.tudelft.in4150.exception;
 
-/**
- * This exception is thrown when a the socket monitor
- * has already been paused.
- */
+/** This exception is thrown when a the socket monitor has already been paused. */
 @SuppressWarnings("serial")
 public class AlreadyPausedException extends RuntimeException {
 

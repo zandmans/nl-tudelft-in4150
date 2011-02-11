@@ -9,9 +9,7 @@ package nl.tudelft.in4150.objects;
 
 public interface IMessageReceivedHandler {
 	/**
-	 * Called when a message has been received by
-	 * the underlying socket.
-	 *
+	 * Called when a message has been received by the underlying socket.
 	 * @param message is the message received.
 	 */
 	public void onMessageReceived(Message message);

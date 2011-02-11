@@ -7,10 +7,7 @@
  */
 package nl.tudelft.in4150.exception;
 
-/**
- * This exception is thrown when a certain message
- * hasn't been sent yet.
- */
+/** This exception is thrown when a certain message hasn't been sent yet. */
 @SuppressWarnings("serial")
 public class MessageHasNotBeenSendException extends RuntimeException {
 

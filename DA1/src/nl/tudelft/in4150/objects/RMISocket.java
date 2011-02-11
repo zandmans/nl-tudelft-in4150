@@ -1,7 +1,7 @@
-package nl.tudelft.in4150.main;
-
-import nl.tudelft.in4150.objects.Message;
-import nl.tudelft.in4150.objects.Socket;
+/**
+ * @author N. de Jong
+ */
+package nl.tudelft.in4150.objects;
 
 import java.rmi.RMISecurityManager;
 
@@ -24,9 +24,7 @@ public class RMISocket extends Socket {
 
 	;
 
-	/**
-	 * Create a new RMI socket.
-	 */
+	/** Create a new RMI socket. */
 	public RMISocket() {
 		if (System.getSecurityManager() == null) {
 			System.setSecurityManager(new RMISecurityManager());
@@ -35,7 +33,6 @@ public class RMISocket extends Socket {
 
 	/**
 	 * Send the actual message to the given URL.
-	 *
 	 * @param message to send.
 	 * @param URL		 to deliver the message to.
 	 */
@@ -52,7 +49,6 @@ public class RMISocket extends Socket {
 
 	/**
 	 * Receive a message.
-	 *
 	 * @param message is the actual message being received.
 	 * @see Message
 	 * @see Message.send
@@ -66,7 +62,6 @@ public class RMISocket extends Socket {
 	/**
 	 * Register the socket, useful for some
 	 * implementations.
-	 *
 	 * @param URL is the URL where the socket is to
 	 *            be registered.
 	 */
@@ -81,9 +76,7 @@ public class RMISocket extends Socket {
 		}
 	}
 
-	/**
-	 * Unregister the socket.
-	 */
+	/** Unregister the socket. */
 	public void unRegister() {
 		if (id != null) {
 			try {
@@ -95,9 +88,7 @@ public class RMISocket extends Socket {
 		}
 	}
 
-	/**
-	 * @return the URL of the socket.
-	 */
+	/** @return the URL of the socket. */
 	public String getURL() {
 		return id;
 	}

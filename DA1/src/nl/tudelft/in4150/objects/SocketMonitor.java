@@ -15,11 +15,7 @@ import nl.tudelft.in4150.exception.NotPausedException;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * The monitor which activates sockets
- * on demand, when messages are waiting in
- * their queues.
- */
+/** The monitor which activates sockets on demand, when messages are waiting in their queues. */
 public class SocketMonitor implements Runnable {
 
 	/* Singleton instance */
@@ -39,10 +35,8 @@ public class SocketMonitor implements Runnable {
 	}
 
 	/**
-	 * Create the SocketMonitor. Make sure it starts
-	 * in a running state, no ids are assigned to
-	 * sockets and the start time of the simulation is
-	 * set to the current time.
+	 * Create the SocketMonitor. Make sure it starts in a running state, no ids are assigned to
+	 * sockets and the start time of the simulation is set to the current time.
 	 */
 	private SocketMonitor() {
 		/* Reset status indicators */
@@ -64,7 +58,6 @@ public class SocketMonitor implements Runnable {
 
 	/**
 	 * Returns the singleton instance of SocketMonitor.
-	 *
 	 * @return the instance of the SocketMonitor.
 	 */
 	public static SocketMonitor getInstance() {
@@ -75,16 +68,12 @@ public class SocketMonitor implements Runnable {
 		return instance;
 	}
 
-	/**
-	 * @return the current time.
-	 */
+	/** @return the current time. */
 	public double getTime() {
 		return currentTime;
 	}
 
-	/**
-	 * Pause the system.
-	 */
+	/** Pause the system. */
 	public void pause() {
 		if (paused)
 			throw new AlreadyPausedException();
@@ -92,9 +81,7 @@ public class SocketMonitor implements Runnable {
 		paused = true;
 	}
 
-	/**
-	 * Continue running the system.
-	 */
+	/** Continue running the system. */
 	public void play() {
 		if (!paused)
 			throw new NotPausedException();
@@ -103,10 +90,7 @@ public class SocketMonitor implements Runnable {
 		startTime = System.currentTimeMillis();
 	}
 
-	/**
-	 * Wake up all synchronized sockets, iff
-	 * they have a message waiting.
-	 */
+	/** Wake up all synchronized sockets, iff they have a message waiting. */
 	private synchronized void runWakeUp() {
 		SynchronizedSocket ss;
 
@@ -166,7 +150,6 @@ public class SocketMonitor implements Runnable {
 
 	/**
 	 * Assign a socket to the given ID.
-	 *
 	 * @param id		 should be unique and identifies the socket.
 	 * @param socket is the actual socket to assign the ID to.
 	 */
@@ -179,7 +162,6 @@ public class SocketMonitor implements Runnable {
 
 	/**
 	 * Unregister a socket.
-	 *
 	 * @param url should be unique.
 	 */
 	public synchronized void unRegisterSocket(String url) {
@@ -189,9 +171,7 @@ public class SocketMonitor implements Runnable {
 		clientMap.remove(url);
 	}
 
-	/**
-	 * Halt the SocketMonitor.
-	 */
+	/** Halt the SocketMonitor. */
 	public void shutdown() {
 		running = false;
 	}
