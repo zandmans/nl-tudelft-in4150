@@ -1,7 +1,5 @@
 package nl.tudelft.in4150.main;
 
-import nl.tudelft.in4150.objects.VectorComparison;
-
 import java.util.HashMap;
 import java.util.Arrays;
 import java.io.Serializable;
@@ -65,8 +63,8 @@ public class VectorClock extends HashMap<String, Integer> implements Serializabl
 	}
 
 	@Override
-	public nl.tudelft.in4150.objects.VectorClock clone() {
-		return (nl.tudelft.in4150.objects.VectorClock) super.clone();
+	public VectorClock clone() {
+		return (VectorClock) super.clone();
 	}
 
 	@Override
@@ -98,9 +96,9 @@ public class VectorClock extends HashMap<String, Integer> implements Serializabl
 	 * @param pTwo - Second Clock being merged.
 	 * @return A new VectorClock with the maximum for each element in either clock.
 	 */
-	public static nl.tudelft.in4150.objects.VectorClock max(nl.tudelft.in4150.objects.VectorClock pOne, nl.tudelft.in4150.objects.VectorClock pTwo) {
+	public static VectorClock max(VectorClock pOne, VectorClock pTwo) {
 		// Create new Clock.
-		nl.tudelft.in4150.objects.VectorClock lResult = new nl.tudelft.in4150.objects.VectorClock();
+		VectorClock lResult = new VectorClock();
 
 		// Go over all elements in clock One, put them in the new clock.
 		for (String lEntry : pOne.keySet()) {
@@ -131,7 +129,7 @@ public class VectorClock extends HashMap<String, Integer> implements Serializabl
 	 * @param pTwo - Second Clock being compared.
 	 * @return VectorComparison value indicating how One relates to Two.
 	 */
-	public static VectorComparison compare(nl.tudelft.in4150.objects.VectorClock pOne, nl.tudelft.in4150.objects.VectorClock pTwo) {
+	public static VectorComparison compare(VectorClock pOne, VectorClock pTwo) {
 		// Initially we assume it is all possible things.
 		boolean lEqual = true;
 		boolean lGreater = true;
