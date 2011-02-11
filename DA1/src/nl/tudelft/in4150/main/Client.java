@@ -6,12 +6,9 @@ package nl.tudelft.in4150.main;
 
 import nl.tudelft.in4150.objects.*;
 
-import java.util.Random;
-
 public class Client implements Runnable, IMessageReceivedHandler {
 	private int clientID;		 /* Unique identifier of this text client */
 	private boolean running; /* Running state of the text client */
-	private Random random = new Random(System.currentTimeMillis());/* A random number generator */
 	private Socket socket;	 /* Socket over which to send data */
 
 	/** Transfroms internal client ID to string representation (Client URL). */
