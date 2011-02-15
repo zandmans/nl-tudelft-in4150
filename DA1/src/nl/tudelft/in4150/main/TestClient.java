@@ -4,8 +4,8 @@
  */
 package nl.tudelft.in4150.main;
 
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 
 public class TestClient extends RMIClient implements Runnable {
 	private boolean running; /* Running state of the text client; assigning false (while running) will cause clean termination of the thread. */
@@ -16,9 +16,11 @@ public class TestClient extends RMIClient implements Runnable {
 		super(clientID);
 
 		this.buffer = new ArrayList<Message>();
-		
+
 		new Thread(this).start();
-		Config.CLIENT_INIT = Math.max(Config.CLIENT_INIT, clientID); // Let all others know this new client exists. (Simple version)
+		synchronized (this) {
+			Config.CLIENT_INIT = Math.max(Config.CLIENT_INIT, clientID); // Let all others know this new client exists. (Simple version)
+		}
 	}
 
 	/** Repeat the process of sending a message to a random node and then sleeping for a configured delay time. */
@@ -48,11 +50,10 @@ public class TestClient extends RMIClient implements Runnable {
 		System.out.println("REC AT " + this.clientID + " MSGID " + message.messageID);
 
 		boolean expected = true;	/* This is the condition to state if the right message is received (V + ej >= Vm) */
-		if(expected) {
+		if (expected) {
 			this.deliver(message);
 			this.processBuffer();
-		}
-		else
+		} else
 			this.buffer.add(message);
 	}
 
@@ -65,8 +66,8 @@ public class TestClient extends RMIClient implements Runnable {
 	/** Check the buffer for messages which could be delivered */
 	public void processBuffer() {
 		boolean expected = true;	/* This is the condition to state if the right message is received (V + ej >= Vm) */
-		for(Message m : this.buffer) /* Check all the messages in the buffer */
-			if(expected) /* The condition for delivering the message from the buffer */
+		for (Message m : this.buffer) /* Check all the messages in the buffer */
+			if (expected) /* The condition for delivering the message from the buffer */
 				deliver(m);
 	}
 
@@ -74,8 +75,7 @@ public class TestClient extends RMIClient implements Runnable {
 	public static void main(String[] args) {
 		initializeRMI(Config.REGISTRY_PORT);
 
-		try {
-			for (int i = 0; i < Config.CLIENT_COUNT; ++i) new TestClient(i); }
+		try { for (int i = 0; i < Config.CLIENT_COUNT; ++i) new TestClient(i); }
 		catch (Exception e) { e.printStackTrace(); }
 	}
 
