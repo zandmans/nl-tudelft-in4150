@@ -1,6 +1,8 @@
+/**
+ * @author N. de Jong
+ * @author T. Zandvliet
+ */
 package nl.tudelft.in4150.main;
-
-import nl.tudelft.in4150.main.Config;
 
 import java.io.Serializable;
 import java.util.Map;
@@ -13,7 +15,9 @@ public class Message implements Serializable {
 	public Map<String, Serializable> payload;
 
 	public Message(int senderID) {
-		this.messageID = (++Config.lastMsgID);
+		synchronized (this) {
+			this.messageID = (++Config.lastMsgID);
+		}
 		this.senderID = senderID;
 	}
 }

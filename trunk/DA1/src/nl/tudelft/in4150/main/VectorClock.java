@@ -1,8 +1,8 @@
 package nl.tudelft.in4150.main;
 
-import java.util.HashMap;
-import java.util.Arrays;
 import java.io.Serializable;
+import java.util.Arrays;
+import java.util.HashMap;
 
 enum VectorComparison {
 	GREATER, EQUAL, SMALLER, SIMULTANEOUS
