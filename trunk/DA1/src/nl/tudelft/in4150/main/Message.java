@@ -10,7 +10,7 @@ import java.util.Map;
 public class Message implements Serializable {
 	public int messageID = -1;
 	public int senderID = -1;
-	//public VectorClock sendTime;
+	public VectorClock sendTime;
 
 	public Map<String, Serializable> payload;
 
