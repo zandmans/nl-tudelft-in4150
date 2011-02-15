@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.ArrayList;
 
 public class TestClient extends RMIClient implements Runnable {
-	private boolean running; /* Running state of the text client */
+	private boolean running; /* Running state of the text client; assigning false (while running) will cause clean termination of the thread. */
 	private List<Message> buffer;	/* The buffer where buffered message will be saved */
 
 	/** Create a new client */
