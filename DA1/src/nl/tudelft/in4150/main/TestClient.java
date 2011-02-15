@@ -10,6 +10,7 @@ import java.util.List;
 public class TestClient extends RMIClient implements Runnable {
 	private boolean running; /* Running state of the text client; assigning false (while running) will cause clean termination of the thread. */
 	private List<Message> buffer;	/* The buffer where buffered message will be saved */
+	private VectorClock sendTime = new VectorClock();
 
 	/** Create a new client */
 	public TestClient(int clientID) throws java.rmi.RemoteException {
@@ -33,7 +34,10 @@ public class TestClient extends RMIClient implements Runnable {
 		while (running) {
 			try { Thread.sleep(Config.CLIENT_DELAY[this.clientID]); } // Wait for some delay
 			catch (InterruptedException e) { e.printStackTrace(); }
-			this.broadcastMessage(new Message(this.clientID)); // Broadcast new message.
+			Message message = new Message(this.clientID);
+			this.sendTime.incrementClock(Integer.toString(this.clientID));
+			message.sendTime = this.sendTime;
+			this.broadcastMessage(message); // Broadcast new message.
 		}
 	}
 
@@ -49,8 +53,9 @@ public class TestClient extends RMIClient implements Runnable {
 		// TODO: Implement some reply mechanism here.
 		System.out.println("REC AT " + this.clientID + " MSGID " + message.messageID);
 
-		boolean expected = true;	/* This is the condition to state if the right message is received (V + ej >= Vm) */
-		if (expected) {
+		if (VectorClock.compare(this.sendTime, message.sendTime) != VectorComparison.SMALLER) {
+			this.sendTime = VectorClock.max(this.sendTime, message.sendTime);
+			// System.out.println(this.sendTime.toString());	// For testing purposes
 			this.deliver(message);
 			this.processBuffer();
 		} else
@@ -65,10 +70,14 @@ public class TestClient extends RMIClient implements Runnable {
 
 	/** Check the buffer for messages which could be delivered */
 	public void processBuffer() {
-		boolean expected = true;	/* This is the condition to state if the right message is received (V + ej >= Vm) */
-		for (Message m : this.buffer) /* Check all the messages in the buffer */
-			if (expected) /* The condition for delivering the message from the buffer */
+		// String strBuffer = "";	// For testing purposes
+		for (Message m : this.buffer) // Check all the messages in the buffer
+		{
+			// strBuffer += m.messageID + ", ";	// For testing purposes
+			if (VectorClock.compare(this.sendTime, m.sendTime) != VectorComparison.SMALLER) // The condition for delivering the message from the buffer
 				deliver(m);
+		}
+		// System.out.println(strBuffer);	// For testing purposes
 	}
 
 	/** Create multiple clients, based on configuration */
