@@ -12,5 +12,5 @@ public class Config {
 
 	public static int lastMsgID = 0;
 
-	public static int REGISTRY_PORT = 1099;
+	public static int REGISTRY_PORT = 1099; 
 }
