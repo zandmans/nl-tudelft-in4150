@@ -20,4 +20,9 @@ public class Message implements Serializable {
 		}
 		this.senderID = senderID;
 	}
+
+	@Override
+	public String toString() {
+		return "" + this.messageID;
+	}
 }

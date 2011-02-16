@@ -8,18 +8,18 @@ enum VectorComparison {
 	GREATER, EQUAL, SMALLER, SIMULTANEOUS
 }
 
-public class VectorClock extends HashMap<String, Integer> implements Serializable {
+public class VectorClock extends HashMap<Integer, Integer> implements Serializable {
 	private static final long serialVersionUID = 6668164199894268488L;// Unique Serial.
 
 	/**
 	 * Increases the component of pUnit by 1.
 	 * @param pUnit - The ID of the vector element being increased.
 	 */
-	public void incrementClock(String pUnit) {
+	public void incrementClock(int pUnit) {
 		if (this.containsKey(pUnit)) {
-			this.put(pUnit, this.get(pUnit).intValue() + 1);
+			this.put(new Integer(pUnit), this.get(new Integer(pUnit)).intValue() + 1);
 		} else {
-			this.put(pUnit, 1);
+			this.put(new Integer(pUnit), 1);
 		}
 	}
 
@@ -27,8 +27,8 @@ public class VectorClock extends HashMap<String, Integer> implements Serializabl
 	 * GUI operation, returns the IDs in some neat order.
 	 * @return The IDs of the elements in the Clock.
 	 */
-	public String[] getOrderedIDs() {
-		String[] lResult = new String[this.size()];
+	public Integer[] getOrderedIDs() {
+		Integer[] lResult = new Integer[this.size()];
 		lResult = this.keySet().toArray(lResult);
 		Arrays.sort(lResult);
 		return lResult;
@@ -40,10 +40,10 @@ public class VectorClock extends HashMap<String, Integer> implements Serializabl
 	 */
 	public Integer[] getOrderedValues() {
 		Integer[] lResult = new Integer[this.size()];
-		String[] lKeySet = this.getOrderedIDs();
+		Integer[] lKeySet = this.getOrderedIDs();
 
 		int i = 0;
-		for (String lKey : lKeySet) {
+		for (Integer lKey : lKeySet) {
 			lResult[i] = this.get(lKey);
 			i++;
 		}
@@ -68,7 +68,7 @@ public class VectorClock extends HashMap<String, Integer> implements Serializabl
 
 	@Override
 	public String toString() {
-		String[] lIDs = this.getOrderedIDs();
+		Integer[] lIDs = this.getOrderedIDs();
 		Integer[] lRequests = this.getOrderedValues();
 
 		String lText = "(";
@@ -86,34 +86,6 @@ public class VectorClock extends HashMap<String, Integer> implements Serializabl
 		lText += ")";
 
 		return lText;
-	}
-
-	/**
-	 * VectorClock merging operation. Creates a new VectorClock with the maximum for
-	 * each element in either clock. Used in Buffer and Process to manipulate clocks.
-	 * @param pOne - First Clock being merged.
-	 * @param pTwo - Second Clock being merged.
-	 * @return A new VectorClock with the maximum for each element in either clock.
-	 */
-	public static VectorClock max(VectorClock pOne, VectorClock pTwo) {
-		// Create new Clock.
-		VectorClock lResult = new VectorClock();
-
-		// Go over all elements in clock One, put them in the new clock.
-		for (String lEntry : pOne.keySet()) {
-			lResult.put(lEntry, pOne.get(lEntry));
-		}
-
-		// Go over all elements in clock Two,
-		for (String lEntry : pTwo.keySet()) {
-			// Insert the Clock Two value if it is not present in One, or if it is higher.
-			if (!lResult.containsKey(lEntry) || lResult.get(lEntry) < pTwo.get(lEntry)) {
-				lResult.put(lEntry, pTwo.get(lEntry));
-			}
-		}
-
-		// Return the merged clock.
-		return lResult;
 	}
 
 	/**
@@ -135,7 +107,7 @@ public class VectorClock extends HashMap<String, Integer> implements Serializabl
 		boolean lSmaller = true;
 
 		// Go over all elements in Clock one.
-		for (String lEntry : pOne.keySet()) {
+		for (Integer lEntry : pOne.keySet()) {
 			// Compare if also present in clock two.
 			if (pTwo.containsKey(lEntry)) {
 				// If there is a difference, it can never be equal.
@@ -157,7 +129,7 @@ public class VectorClock extends HashMap<String, Integer> implements Serializabl
 		}
 
 		// Go over all elements in Clock two.
-		for (String lEntry : pTwo.keySet()) {
+		for (Integer lEntry : pTwo.keySet()) {
 			// Only elements we have not found in One still need to be checked.
 			if (!pOne.containsKey(lEntry) && (pTwo.get(lEntry) != 0)) {
 				lEqual = false;
@@ -175,5 +147,18 @@ public class VectorClock extends HashMap<String, Integer> implements Serializabl
 		} else {
 			return VectorComparison.SIMULTANEOUS;
 		}
+	}
+
+
+	public static boolean isDeliverable(VectorClock pOne, VectorClock pTwo, int pUnit) {
+		int value1;
+
+		for(Integer Item : pOne.keySet()) {
+			value1 = pOne.get(Item).intValue();
+			if(Item.intValue() == pUnit) value1++;
+			if(value1 < pTwo.get(Item).intValue()) return false;
+		}
+
+		return true;
 	}
 }
