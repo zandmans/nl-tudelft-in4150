@@ -9,7 +9,7 @@
  * Together, these form the (RMI-based) simulated transport layer for this project.
  *
  */
-package nl.tudelft.in4150.main;
+package nl.tudelft.in4150.ex1;
 
 import java.rmi.RMISecurityManager;
 import java.rmi.Remote;
