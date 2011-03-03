@@ -10,15 +10,13 @@ import java.util.Map;
 public class Message implements Serializable {
 	public int messageID = -1;
 	public int id = -1;
-	public int type = -1;
 
 	public Map<String, Serializable> payload;
 
-	public Message(int id, int type) {
+	public Message(int id) {
 		synchronized (this) {
 			this.messageID = (++Config.lastMsgID);
 			this.id = id;
-			this.type = type;
 		}
 	}
 
