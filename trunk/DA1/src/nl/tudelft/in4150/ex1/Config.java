@@ -21,6 +21,9 @@ public class Config {
 
 	public static double P_RND_MSG_SEL = 0.2; // Probability of selecting a message of the delivered list to a message (as 'dependancy' of the message)
 
+	public static boolean BYZANTINE_ENABLED = true; // Are intended malfunctions allowed? (to test malfunction detection)
+	public static double P_RND_BYZANTINE_ERROR = 0.02; // Chance of malfunction occurence.
+
 	/** Non-settings / interprocess variables */
 	public static int CLIENT_INIT = 0; // Not a setting; this is a shared memory variable that contains the number of already initiated clients.
 	public static int lastMsgID = 0; // Not a setting; this is a shared memory variable that contains the ID of the last message created.

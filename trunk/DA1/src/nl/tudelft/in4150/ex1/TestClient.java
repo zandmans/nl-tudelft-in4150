@@ -48,6 +48,7 @@ public class TestClient extends RMIClient implements Runnable {
 			}
 
 			this.broadcastMessage(msg); // broadcast(m,V)
+			this.delivered.add(msg.messageID); // Just to let ourselves know that we know of this message existence.
 		}
 	}
 
@@ -84,7 +85,7 @@ public class TestClient extends RMIClient implements Runnable {
 		 ****************************************************************************************/
 		for (Integer msgID : ((ArrayList<Integer>)msg.payload.get("Dependancies")))
 			if (!this.delivered.contains(msgID))
-				System.out.println("ERROR: Algorithm malfunction: Message "+msg.messageID+" requires message "+msgID+" to be received before receiving this!");
+				System.out.println("ERROR: Algorithm malfunction @ "+this.clientID+": Message "+msg.messageID+" requires message "+msgID+" to be received before receiving this!");
 
 		// TODO: Implement a procedure done after receiving the right message
 	}
@@ -107,6 +108,10 @@ public class TestClient extends RMIClient implements Runnable {
 		ArrayList<Integer> ret = new ArrayList<Integer>();
 		for (Integer m : this.delivered)
 			if (Math.random() < Config.P_RND_MSG_SEL) ret.add(m);
+
+		if (Config.BYZANTINE_ENABLED)
+			if (Math.random() < Config.P_RND_BYZANTINE_ERROR) ret.add(new Integer(Config.lastMsgID * 1000));
+
 		return(ret);
 	}
 
