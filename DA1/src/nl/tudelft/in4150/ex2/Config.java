@@ -14,6 +14,6 @@ public class Config {
 
 	public static int REGISTRY_PORT = 1099; // Setting: port of RMI registry.
 
-	public static int MIN_DELAY = 0; // Setting: delay interval for messages (transfer times)
+	public static int MIN_DELAY = 500; // Setting: delay interval for messages (transfer times)
 	public static int MAX_DELAY = 1000;
 }
