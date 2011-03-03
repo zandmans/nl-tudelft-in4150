@@ -7,6 +7,7 @@ package nl.tudelft.in4150.ex2;
 public class Component extends RMIClient {
 	private boolean running; /* Running state of the text client; assigning false (while running) will cause clean termination of the thread. */
 	private int id; // own id
+	private int tid; // elected id
 	private int nRight; // neighbour right
 	private boolean elected=false;
 	private int ntid=0, nntid=0;
@@ -28,19 +29,14 @@ public class Component extends RMIClient {
 
 	/** Show data when it is received. */
 	public void onMessageReceived(Message message) {
-
-		if(this.elected) {
-			System.out.println("CLIENT " + this.clientID + " shouts: " + this.id);
-			this.sendMessage(new Message(this.id, 1), this.nRight);
-			return;
-		}
+		this.tid = this.id;
 
 		if(this.relay) {
 			this.relay(message);
 			return;
 		}
 
-		this.sendMessage(new Message(this.id, 1), this.nRight);
+		this.sendMessage(new Message(this.tid, 1), this.nRight);
 		if(message.type==1) this.processFirstMessage(message);
 		else if(message.type==2) this.processSecondMessage(message);
 	}
@@ -53,7 +49,7 @@ public class Component extends RMIClient {
 
 		System.out.println("(<==) RCV1: (" + this.ntid + ") OWN ID: " + this.id + " BY " + this.clientID);
 
-		this.sendMessage(new Message(Math.max(this.id, message.id), 2), this.nRight); // send max(tid,ntid)
+		this.sendMessage(new Message(Math.max(this.tid, this.ntid), 2), this.nRight); // send max(tid,ntid)
 
 		System.out.println("(==>) SND2: " + Math.max(this.id, message.id) + " FROM " + this.clientID);
 	}
@@ -64,10 +60,10 @@ public class Component extends RMIClient {
 
 		System.out.println("(<==) RCV2: (" + this.ntid + "," + this.nntid + ") OWN ID: " + this.id + " BY " + this.clientID);
 
-		if((this.ntid >= this.id) && (this.ntid >= this.nntid)) { //if ntid >= tid and ntid >= nntid
+		if((this.ntid >= this.tid) && (this.ntid >= this.nntid)) { //if ntid >= tid and ntid >= nntid
 			System.out.println("(+++) CHANGE ID " + this.id + " TO " + this.ntid);
 
-			this.id = this.ntid;	// then tid <- ntid
+			this.tid = this.ntid;	// then tid <- ntid
 		}
 		else {
 			this.relay = true;
