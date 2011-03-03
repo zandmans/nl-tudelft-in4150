@@ -7,11 +7,11 @@ package nl.tudelft.in4150.ex2;
 enum STATE {
 	ACTIVE_1,	// Waiting for first message receival
 	ACTIVE_2, // Waiting for second message receival
-	RELAY			// In relay state
+	RELAY,		// In relay state
+	SHUT_UP
 }
 
 public class Component extends RMIClient {
-	private boolean running; /* Running state of the text client; assigning false (while running) will cause clean termination of the thread. */
 	private STATE state;
 
 	private int nRight; // neighbour right
@@ -38,37 +38,44 @@ public class Component extends RMIClient {
 
 	/** Show data when it is received. */
 	public synchronized void onMessageReceived(Message message) {
+		// Code for 'termination'.
+		if (this.state == STATE.SHUT_UP) return;
+		if (message.elected) {
+			System.out.println("I ("+this.id+") know you are elected. I will shut up now!");
+			this.sendMessage(new Message(0, true), this.nRight);
+			this.state = STATE.SHUT_UP;
+			return;
+		}
+
+		// Actual implementation.
 		System.out.print("ID="+this.id+" ; TID="+this.tid+" ; NTID="+this.ntid+" ; NNTID="+message.id+" ; STATE="+this.state+" ; ");
 		switch (this.state) {
 			case ACTIVE_1: this.processFirstMessage(message); break;
 			case ACTIVE_2: this.processSecondMessage(message); break;
 			case RELAY:    this.relay(message); break;
 		}
-		System.out.println("NEW STATE="+this.state);
+		if (!this.elected) System.out.println("NEW STATE="+this.state);
 	}
 
 	/** Receive ntid and process it */
 	public void processFirstMessage(Message message) {
-		if((this.ntid=message.id)==this.id) this.elected = true; // if ntid = id then elected <- true
-		//System.out.println("(<==) RCV1: (" + this.ntid + ") OWN ID: " + this.id + " BY " + this.clientID);
+		if((this.ntid=message.id)==this.id) this.electMe(); // if ntid = id then elected <- true
 
-		this.sendMessage(new Message(Math.max(this.tid, this.ntid)), this.nRight); // send max(tid,ntid)
-		//System.out.println("(==>) SND2: " + Math.max(this.tid, message.id) + " FROM " + this.clientID);
+		this.sendMessage(new Message(Math.max(this.tid, this.ntid), message.elected || this.elected), this.nRight); // send max(tid,ntid)
+		if (!this.elected) System.out.print("SENT="+Math.max(this.tid, this.ntid)+" ; ");
 
 		this.state = STATE.ACTIVE_2;
 	}
 
 	/** Receive nntid and process it */
 	public void processSecondMessage(Message message) {
-		if(message.id==this.id) this.elected = true;	// if nntid = id then elected <- true // nntid === message.id
-		//System.out.println("(<==) RCV2: (" + this.ntid + "," + message.id + ") OWN ID: " + this.id + " BY " + this.clientID);
+		if(message.id==this.id) this.electMe();	// if nntid = id then elected <- true // nntid === message.id
 
 		if((this.ntid >= this.tid) && (this.ntid >= message.id)) { //if ntid >= tid and ntid >= nntid
-			//System.out.println("(+++) CHANGE TID " + this.tid + " TO " + this.ntid);
 			this.tid = this.ntid;	// then tid <- ntid
 
-			//System.out.println("(==>) SND1: " + this.id + " FROM " + this.clientID);
-			this.sendMessage(new Message(this.tid), this.nRight);
+			this.sendMessage(new Message(this.tid, message.elected || this.elected), this.nRight);
+			if (!this.elected) System.out.print("SENT="+this.tid+" ; ");
 
 			this.state = STATE.ACTIVE_1;
 		} else this.state = STATE.RELAY;
@@ -76,11 +83,14 @@ public class Component extends RMIClient {
 
 	/** The relay processes */
 	public void relay(Message message) {
-		if(message.id == this.id) {
-			this.elected = true;
-			System.out.println("Client "+this.id+" shouts: I'm elected!");
-		}
-		this.sendMessage(new Message(this.id), this.nRight);
+		if(message.id == this.id) this.electMe();
+		this.sendMessage(new Message(message.id, this.elected), this.nRight);
+		if (!this.elected) System.out.print("SENT="+message.id+" ; ");
+	}
+
+	public void electMe() {
+		this.elected = true;
+		System.out.println("\n\nClient "+this.id+" shouts: I'm elected!");
 	}
 
 	/** Create multiple clients, based on configuration */
