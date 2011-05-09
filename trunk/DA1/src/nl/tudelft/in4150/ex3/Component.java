@@ -4,109 +4,85 @@
  */
 package nl.tudelft.in4150.ex3;
 
-enum STATE {
-	ACTIVE_1,	// Waiting for first message receival
-	ACTIVE_2, // Waiting for second message receival
-	RELAY,		// In relay state
-	SHUT_UP
-}
+import java.util.Arrays;
 
 public class Component extends RMIClient {
-	private STATE state;
-
-	private int nRight; // neighbour right
-
 	private int id; // own id
-	private int tid; // elected id
-	private int ntid=0;
-	private boolean elected=false;
+	private int order;
+	private int value;
+	private int[] values;
+	private int expectedMessage;
 
 	/** Create a new client */
-	public Component(int clientID, int rightID, String registryServer, int[] clients) throws java.rmi.RemoteException {
+	public Component(int clientID, String registryServer, int[] clients) throws java.rmi.RemoteException {
 		super(clientID, registryServer, clients);
 
-		this.tid = (this.id = clientID); // retrieve own id
-		this.nRight = rightID; // define neighbour right
+		this.id = clientID; // retrieve own id
 
-		synchronized (this) {
-			this.state = STATE.ACTIVE_1;
-			//Config.CLIENT_INIT = Math.max(Config.CLIENT_INIT, clientID); // Let all others know this new client exists. (Simple version)
-		}
+		this.values = new int[Config.CLIENT_COUNT];
+		Arrays.fill(this.values, 0); // fill the array with default values
+
+		this.expectedMessage = 1;
 	}
 
-	public void initiate() {
-		this.sendMessage(new Message(this.tid), this.nRight); // send message to right neighbour
+	/** Broadcast message to lieutenants */
+	public synchronized void broadcast(int msgID, int faults, int value) {
+		int[] lieutenants = this.defineIDs();
+		for (int i = 1; i < lieutenants.length; ++i)
+			this.sendMessage(new Message(msgID, faults, value, this.id, lieutenants), lieutenants[i]);
 	}
 
-	/** Show data when it is received. */
+	/** Code executed by the lieutenant */
 	public synchronized void onMessageReceived(Message message) {
-		// Code for 'termination'.
-		if (this.state == STATE.SHUT_UP) return;
-		if (message.elected) {
-			System.out.println("I ("+this.id+") know you are elected. I will shut up now!");
-			this.sendMessage(new Message(0, true), this.nRight);
-			this.state = STATE.SHUT_UP;
-			return;
+		this.values[message.commander] = message.initialValue;
+		if(message.faults == 0) this.majority();
+		else this.broadcast(message.id+1, message.faults-1, message.initialValue); // TODO: check the message round
+	}
+
+	/** The commander changes during the algorithm, so the lieutenants have to be defined */
+	public int[] defineIDs()
+	{
+		int[] ids = new int[Config.CLIENT_COUNT-1];
+		int j = 0;
+		for(int i = 1; i < Config.CLIENT_COUNT-1; i++) {
+			if(Config.CLIENT_ID[i] != this.id) {
+				ids[j] = Config.CLIENT_ID[i];
+				j++;
+			}
+		}
+		return ids;
+	}
+
+	/** Define the value with the most occurrences in the array */
+	public void majority()
+	{
+		int major = this.values[0];
+		int count = 1;
+		for(int i = 0; i < this.values.length; i++) {
+			if(major == this.values[i] && this.values[i] > 0) count++;
+			else if(count == 0) {
+				major = this.values[i];
+				count = 1;
+			}
+			else count--;
 		}
 
-		// Actual implementation.
-		System.out.print("ID="+this.id+" ; TID="+this.tid+" ; NTID="+this.ntid+" ; NNTID="+message.id+" ; STATE="+this.state+" ; ");
-		switch (this.state) {
-			case ACTIVE_1: this.processFirstMessage(message); break;
-			case ACTIVE_2: this.processSecondMessage(message); break;
-			case RELAY:    this.relay(message); break;
-		}
-		if (!this.elected) System.out.println("NEW STATE="+this.state);
-	}
-
-	/** Receive ntid and process it */
-	public void processFirstMessage(Message message) {
-		if((this.ntid=message.id)==this.id) this.electMe(); // if ntid = id then elected <- true
-
-		this.sendMessage(new Message(Math.max(this.tid, this.ntid), message.elected || this.elected), this.nRight); // send max(tid,ntid)
-		if (!this.elected) System.out.print("SENT="+Math.max(this.tid, this.ntid)+" ; ");
-
-		this.state = STATE.ACTIVE_2;
-	}
-
-	/** Receive nntid and process it */
-	public void processSecondMessage(Message message) {
-		if(message.id==this.id) this.electMe();	// if nntid = id then elected <- true // nntid === message.id
-
-		if((this.ntid >= this.tid) && (this.ntid >= message.id)) { //if ntid >= tid and ntid >= nntid
-			this.tid = this.ntid;	// then tid <- ntid
-
-			this.sendMessage(new Message(this.tid, message.elected || this.elected), this.nRight);
-			if (!this.elected) System.out.print("SENT="+this.tid+" ; ");
-
-			this.state = STATE.ACTIVE_1;
-		} else this.state = STATE.RELAY;
-	}
-
-	/** The relay processes */
-	public void relay(Message message) {
-		if(message.id == this.id) this.electMe();
-		this.sendMessage(new Message(message.id, this.elected), this.nRight);
-		if (!this.elected) System.out.print("SENT="+message.id+" ; ");
-	}
-
-	public void electMe() {
-		this.elected = true;
-		System.out.println("\n\nClient "+this.id+" shouts: I'm elected!");
+		this.order = major;
+		System.out.println("" + major);
 	}
 
 	/** Create multiple clients, based on configuration */
 	public static void main(String[] args) {
-		if (args.length > 0) { // Multi process version. 1st param: my ID. 2nd param: neighbour ID. 3rd param: registry server. 4th param: sleep interval at start. 5th param: do I initiate? 6th param: am I registry?
+		if (args.length > 0) { // Multi process version. 1st param: my ID. 2nd param: registry server. 3rd param: sleep interval at start. 4th param: do I broadcast? 5th param: am I registry?
 			try {
-				if (args[5].equals("true")) initializeRMI(Config.REGISTRY_PORT);
+				if (args[4].equals("true")) initializeRMI(Config.REGISTRY_PORT);
 
-				Component me = new Component(Integer.parseInt(args[0]), Integer.parseInt(args[1]), args[2], null);
+				Component me = new Component(Integer.parseInt(args[0]), args[1], null);
 
-				try { Thread.sleep(Integer.parseInt(args[3])); } // Wait for everyones initialization.
+				try { Thread.sleep(Integer.parseInt(args[2])); } // Wait for everyones initialization.
 				catch (InterruptedException e) { e.printStackTrace(); }
 
-				if (args[4].equals("true")) me.initiate();
+				if (args[3].equals("true")) me.broadcast(1, Config.FAULTS, Config.INITIAL_VALUE);
 			} catch (Exception e) { e.printStackTrace(); }
 			
 		} else { // Standard configuration in 1 process.
@@ -116,14 +92,13 @@ public class Component extends RMIClient {
 
 			try {
 				for (int i = 0; i < Config.CLIENT_COUNT; ++i)
-					comps[i] = new Component(Config.CLIENT_ID[i], Config.CLIENT_ID[i == Config.CLIENT_COUNT-1 ? 0 : i+1], "localhost", Config.CLIENT_ID);
+					comps[i] = new Component(Config.CLIENT_ID[i], "localhost", Config.CLIENT_ID);
+
+				comps[0].broadcast(1, Config.FAULTS, Config.INITIAL_VALUE);	// the commander sends a broadcast to the lieutenants
 			} catch (Exception e) { e.printStackTrace(); }
 
 			try { Thread.sleep(1000); } // Wait for everyones initialization.
 			catch (InterruptedException e) { e.printStackTrace(); }
-
-			for (int i = 0; i < Config.CLIENT_COUNT; ++i)
-				comps[i].initiate(); // Everyone initiates
 		}
 	}
 }
