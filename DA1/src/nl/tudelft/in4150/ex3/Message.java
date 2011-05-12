@@ -6,22 +6,22 @@ package nl.tudelft.in4150.ex3;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.LinkedList;
 
 public class Message implements Serializable {
-	public int faults = 0;
-	public int value = -1;
-	public int commander = 1;
-	public ArrayList<Integer> lieutenants;
+	public int currentRound;
+	public int sender;
+	public ArrayList<LinkedList<Integer>> paths;
+	public ArrayList<Integer> values;
 
-	public Message(int f, int v, int c, ArrayList<Integer> i) {
-		this.faults = f; 				  // the maximum number of failing processors left
-		this.value = v;	          // the value of the order by the current commander
-		this.commander = c;			  // the current commander
-		this.lieutenants = (ArrayList<Integer>)i.clone();				// the lieutenants...
+	public Message(int currentRound, int sender) {
+		this.currentRound = currentRound; // the maximum number of failing processors left
+		this.sender = sender;	// the value of the order by the current commander
+
 	}
 
-	@Override
-	public String toString() {
-		return "f: " + this.faults + " i:" + this.value + " clients:" + this.lieutenants.toString();
+	public void AddSubMsg(LinkedList<Integer> path, int value) {
+		this.paths.add((LinkedList<Integer>)path.clone());
+		this.values.add(value);
 	}
 }
