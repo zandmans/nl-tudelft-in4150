@@ -3,108 +3,111 @@
  * @author T. Zandvliet
  */
 package nl.tudelft.in4150.ex3;
-
-import nl.tudelft.in4150.ex1.*;
-import nl.tudelft.in4150.ex1.Config;
-
-import java.util.Arrays;
-import java.util.ArrayList;
+import java.util.LinkedList;
 
 public class Component extends RMIClient implements Runnable {
-	private int order;
-	private int[] values;
-	private int[] values_accent;
+	private DecisionTree data;
+	private int maxFaults;
 
+	private int faultLevel;
+
+	// Vary per round
+	private Message roundMessage;
+	private int currentRound;
+	private boolean receivedFrom[];
 
 	/** Create a new client */
-	public Component(int clientID, String registryServer, int[] clients) throws java.rmi.RemoteException {
+	public Component(int clientID, String registryServer, int[] clients, int maxFaults, int faultLevel) throws java.rmi.RemoteException {
 		super(clientID, registryServer, clients);
 
-		this.values = new int[clients.length];
-		this.values_accent = new int[clients.length];
-		//Arrays.fill(this.values, 0); // fill the array with default values
+		this.data = null;
+		this.faultLevel = faultLevel;
+		this.currentRound = 0;
+		this.maxFaults = maxFaults;
 
-		//System.out.println(this.clientID + Arrays.toString(this.defineIDs()));
+		this.receivedFrom = new boolean[clients.length];
 
 		new Thread(this).start();
 	}
 
 	public void run() {
-		// Synchronized looping
-		// In each round M
-			// For each process do
-				// SendMessages code
-			//<
-		//<
-		// For each process do
-			// If I am not IsFaulty
-				// Decide
-			// Else
-				// Output I am faulty
-			//<
-		//<
+		if (this.clientID == 0) {
+			LinkedList<Integer> path = CreateNewRootPath();
+			int value = 1; Message msg;
+			for (int i=1; i<this.clients.length; i++) {
+				if (this.faultLevel > 1) value = (Math.random() > 0.5 ? 1 : 0);
+				msg = new Message(0, 0); msg.AddSubMsg(path, value);
+				if (this.faultLevel < 2) this.sendMessage(msg, i);
+			}
+			data = new DecisionTree(this.clientID, value);
+		} else {
+			for (int round = 0; round<=this.maxFaults; round++) {
+				// Initialize new round
+				this.currentRound = round;
+				for (int i=1; i<this.clients.length; i++) receivedFrom[i] = false;
+				roundMessage = new Message(round, this.clientID);
 
+				// Send messages
+				if (this.faultLevel < 2) {
+					for (int i=1; i<this.clients.length; i++) {
+						if (this.faultLevel > 1)
+							for (int j=0; j<this.roundMessage.values.size(); j++)
+								this.roundMessage.values.set(j, (Math.random() > 0.5 ? 1 : 0));
+						this.sendMessage(roundMessage, i);
+					}
+				}
+
+				// Sleep for round time
+				try { Thread.sleep(Config.ROUND_TIME); }
+				catch (InterruptedException e) { e.printStackTrace(); }
+
+				// Handle non-received messages
+				//
+			}
+			// Decide output
+			if (this.faultLevel == 0) System.out.println("I ("+this.clientID+") have decided on " + this.data.Decide());
+			else 											System.out.println("I am a faulty process so my decision does not matter =)");
+		}
 	}
 
-	public void startSynchronizedLoop()
+	public LinkedList<Integer> CreateNewRootPath() {
+		LinkedList<Integer> path = new LinkedList<Integer>();
+		path.add(0);
+		return(path);
+	}
 
-	/** Broadcast message to lieutenants */
-	public void broadcast(int faults, int value, ArrayList<Integer> lieutenants) {
-		for (int i=0; i<this.clients.length; i++)
-			//if (i!=this.clientID) // Should we also broadcast to ourselves?
-				//if (i>0) // Should we also involve original commander?
-					this.sendMessage(new Message(faults, value, this.clientID, lieutenants), this.clients[i]);
+	public synchronized void HandleSubMsg(LinkedList<Integer> path, int value) {
+		this.data.AddNewNode(path, value);
+		if (this.currentRound < this.maxFaults && !path.contains(this.clientID)) {
+			LinkedList<Integer> newPath = new LinkedList<Integer>(path);
+			newPath.add(this.clientID);
+			roundMessage.AddSubMsg(newPath, value);
+		}
 	}
 
 	/** Code executed by the lieutenant */
-	public synchronized void onMessageReceived(Message message) {
-		if (message.faults == 0) {
-			//
-		} else {
-		this.values[message.commander] = message.value;
-			//
-			this.broadcast(message.id+1, message.faults-1, message.initialValue); // TODO: check the message round
-			this.majority();
-		}
-		//////
-		// mNodes[ path ] = node
-	}
+	public synchronized void onMessageReceived(Message msg) {
+		if (this.maxFaults - msg.currentRound == this.currentRound) { // Check round = valid
+			System.out.println("I ("+this.clientID+") have received round "+this.currentRound+" message from "+msg.sender);
+			this.receivedFrom[msg.sender] = true;
 
-	/** Define the value with the most occurrences in the array */
-	public void majority() {
-		int major = this.values[0];
-		int count = 1;
-		for(int i = 0; i < this.values.length; i++) {
-			if(major == this.values[i] && this.values[i] > 0) count++;
-			else if(count == 0) {
-				major = this.values[i];
-				count = 1;
-			}
-			else count--;
-		}
+			for (int i=0; i<msg.paths.size(); i++)
+				HandleSubMsg(msg.paths.get(i), msg.values.get(i));
 
-		this.order = major;
-		System.out.println("" + major);
-		//////// input: path
-		// n = mChildren[ path ].size
-		//
+		} else System.out.println("I ("+this.clientID+") received OUT-OF-DATE message from "+msg.sender+"; ignoring.");
 	}
 
 	/** Create multiple clients, based on configuration */
 	public static void main(String[] args) {
-		if (args.length > 0) { // Multi process version. 1st param: my ID. 2nd param: registry server. 3rd param: client count. 4rd param: sleep interval at start. 5th param: am I registry?
+		if (args.length > 0) { // Multi process version. 1st param: my ID. 2nd param: registry server. 3rd param: client count. 4th param: max_faults. 5th param: fault_level. 6th param: sleep interval at start. 7th param: am I registry?
 			try {
-				if (args[4].equals("true")) initializeRMI(Config.REGISTRY_PORT);
+				if (args[7].equals("true")) initializeRMI(Config.REGISTRY_PORT);
 
-				int[] clients = new int[args[2]]; for (int i=0; i<Integer.parseInt(args[2]); i++) clients[i] = i;
-				Component me = new Component(Integer.parseInt(args[0]), args[1], clients);
+				int[] clients = new int[Integer.parseInt(args[2])]; for (int i=0; i<Integer.parseInt(args[2]); i++) clients[i] = i;
+				Component me = new Component(Integer.parseInt(args[0]), args[1], clients, Integer.parseInt(args[3]), Integer.parseInt(args[4]));
 
-				try { Thread.sleep(Integer.parseInt(args[3])); } // Wait for everyones initialization.
+				try { Thread.sleep(Integer.parseInt(args[5])); } // Wait for everyones initialization.
 				catch (InterruptedException e) { e.printStackTrace(); }
-
-				ArrayList<Integer> initList = new ArrayList<Integer>();
-				initList.add(me.clientID);
-				if (args[3].equals("true")) me.broadcast(Config.FAULTS, Config.INITIAL_VALUE, initList);
 			} catch (Exception e) { e.printStackTrace(); }
 			
 		} else { // Standard configuration in 1 process.
@@ -114,15 +117,11 @@ public class Component extends RMIClient implements Runnable {
 
 			try {
 				for (int i = 0; i < Config.CLIENT_ID.length; ++i)
-					comps[i] = new Component(Config.CLIENT_ID[i], "localhost", Config.CLIENT_ID);
+					comps[i] = new Component(Config.CLIENT_ID[i], "localhost", Config.CLIENT_ID, Config.FAULTS, Config.FL[i]);
 			} catch (Exception e) { e.printStackTrace(); }
 
 			try { Thread.sleep(1000); } // Wait for everyones initialization.
 			catch (InterruptedException e) { e.printStackTrace(); }
-
-			ArrayList<Integer> initList = new ArrayList<Integer>();
-			initList.add(0);
-			comps[0].broadcast(Config.FAULTS, Config.INITIAL_VALUE, initList);	// the commander sends a broadcast to the lieutenants
 		}
 	}
 }

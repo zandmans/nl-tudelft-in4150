@@ -7,6 +7,7 @@ package nl.tudelft.in4150.ex3;
 /** Configuration */
 public class Config {
 	public static int[] CLIENT_ID = {0,1,2,3,4,5,6}; // Define the client id's
+	public static int[] FL = {0,0,2,0,0,0,0}; // Define the client id's
 	public static int FAULTS = 2;
 	public static int INITIAL_VALUE = 10;
 	public static int DEFAULT_VALUE = 5;
