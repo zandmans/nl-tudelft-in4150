@@ -31,31 +31,36 @@ public class Component extends RMIClient implements Runnable {
 	}
 
 	public void run() {
+		try { Thread.sleep(1000); } // Wait for everyones initialization.
+		catch (InterruptedException e) { e.printStackTrace(); }
+
 		if (this.clientID == 0) {
 			LinkedList<Integer> path = CreateNewRootPath();
 			int value = 1; Message msg;
 			for (int i=1; i<this.clients.length; i++) {
-				if (this.faultLevel > 1) value = (Math.random() > 0.5 ? 1 : 0);
+				if (this.faultLevel > 0) value = (Math.random() > 0.5 ? 1 : 0);
 				msg = new Message(0, 0); msg.AddSubMsg(path, value);
 				if (this.faultLevel < 2) this.sendMessage(msg, i);
 			}
 			data = new DecisionTree(this.clientID, value);
 		} else {
+			receivedFrom[0] = false;
+			for (int i=1; i<this.clients.length; i++) receivedFrom[i] = true; // Prepare first round
 			for (int round = 0; round<=this.maxFaults; round++) {
-				// Initialize new round
 				this.currentRound = round;
-				for (int i=1; i<this.clients.length; i++) receivedFrom[i] = false;
-				roundMessage = new Message(round, this.clientID);
 
 				// Send messages
-				if (this.faultLevel < 2) {
-					for (int i=1; i<this.clients.length; i++) {
-						if (this.faultLevel > 1)
-							for (int j=0; j<this.roundMessage.values.size(); j++)
-								this.roundMessage.values.set(j, (Math.random() > 0.5 ? 1 : 0));
-						this.sendMessage(roundMessage, i);
+				if (this.roundMessage != null) // Ignore sending messages in round 0
+					if (this.faultLevel < 2) {
+						for (int i=1; i<this.clients.length; i++) {
+							if (this.faultLevel > 0)
+								for (int j=0; j<this.roundMessage.values.size(); j++)
+									this.roundMessage.values.set(j, (Math.random() > 0.5 ? 1 : 0));
+									//this.roundMessage.values.set(j, 0);
+							this.sendMessage(roundMessage, i);
+						}
 					}
-				}
+				roundMessage = new Message(round+1, this.clientID); // Reset message object for next round
 
 				// Sleep for round time
 				try { Thread.sleep(Config.ROUND_TIME); }
@@ -63,6 +68,9 @@ public class Component extends RMIClient implements Runnable {
 
 				// Handle non-received messages
 				//
+
+				// Prepare new round
+				for (int i=1; i<this.clients.length; i++) receivedFrom[i] = false;
 			}
 			// Decide output
 			if (this.faultLevel == 0) System.out.println("I ("+this.clientID+") have decided on " + this.data.Decide());
@@ -77,7 +85,9 @@ public class Component extends RMIClient implements Runnable {
 	}
 
 	public synchronized void HandleSubMsg(LinkedList<Integer> path, int value) {
-		this.data.AddNewNode(path, value);
+		if (path.size() == 1) this.data = new DecisionTree(path.get(0), value);
+		else this.data.AddNewNode(path, value);
+
 		if (this.currentRound < this.maxFaults && !path.contains(this.clientID)) {
 			LinkedList<Integer> newPath = new LinkedList<Integer>(path);
 			newPath.add(this.clientID);
@@ -87,14 +97,15 @@ public class Component extends RMIClient implements Runnable {
 
 	/** Code executed by the lieutenant */
 	public synchronized void onMessageReceived(Message msg) {
-		if (this.maxFaults - msg.currentRound == this.currentRound) { // Check round = valid
-			System.out.println("I ("+this.clientID+") have received round "+this.currentRound+" message from "+msg.sender);
-			this.receivedFrom[msg.sender] = true;
+		//if (!msg.values.isEmpty()) // Ignore empty messages
+			if (msg.currentRound == this.currentRound) { // Check round = valid
+				System.out.println("I ("+this.clientID+") have received round "+this.currentRound+" message from "+msg.sender+"; "+msg.toString());
+				this.receivedFrom[msg.sender] = true;
 
-			for (int i=0; i<msg.paths.size(); i++)
-				HandleSubMsg(msg.paths.get(i), msg.values.get(i));
+				for (int i=0; i<msg.paths.size(); i++)
+					HandleSubMsg(msg.paths.get(i), msg.values.get(i));
 
-		} else System.out.println("I ("+this.clientID+") received OUT-OF-DATE message from "+msg.sender+"; ignoring.");
+			} else System.out.println("I ("+this.clientID+") received OUT-OF-DATE (Now="+this.currentRound+",Msg="+msg.currentRound+") message from "+msg.sender+"; ignoring.");
 	}
 
 	/** Create multiple clients, based on configuration */
@@ -119,9 +130,6 @@ public class Component extends RMIClient implements Runnable {
 				for (int i = 0; i < Config.CLIENT_ID.length; ++i)
 					comps[i] = new Component(Config.CLIENT_ID[i], "localhost", Config.CLIENT_ID, Config.FAULTS, Config.FL[i]);
 			} catch (Exception e) { e.printStackTrace(); }
-
-			try { Thread.sleep(1000); } // Wait for everyones initialization.
-			catch (InterruptedException e) { e.printStackTrace(); }
 		}
 	}
 }
