@@ -4,6 +4,7 @@
  */
 package nl.tudelft.in4150.ex3;
 import java.util.LinkedList;
+import java.util.ArrayList;
 
 public class Component extends RMIClient implements Runnable {
 	private DecisionTree data;
@@ -31,6 +32,8 @@ public class Component extends RMIClient implements Runnable {
 	}
 
 	public void run() {
+		ArrayList<Integer> missingSenders;
+
 		try { Thread.sleep(1000); } // Wait for everyones initialization.
 		catch (InterruptedException e) { e.printStackTrace(); }
 
@@ -40,7 +43,7 @@ public class Component extends RMIClient implements Runnable {
 			for (int i=1; i<this.clients.length; i++) {
 				if (this.faultLevel > 0) value = (Math.random() > 0.5 ? 1 : 0);
 				msg = new Message(0, 0); msg.AddSubMsg(path, value);
-				if (this.faultLevel < 2) this.sendMessage(msg, i);
+				if ((this.faultLevel < 2) || (Math.random() > 0.5)) this.sendMessage(msg, i);
 			}
 			data = new DecisionTree(this.clientID, value);
 		} else {
@@ -51,14 +54,13 @@ public class Component extends RMIClient implements Runnable {
 
 				// Send messages
 				if (this.roundMessage != null) // Ignore sending messages in round 0
-					if (this.faultLevel < 2) {
-						for (int i=1; i<this.clients.length; i++) {
-							if (this.faultLevel > 0)
-								for (int j=0; j<this.roundMessage.values.size(); j++)
-									this.roundMessage.values.set(j, (Math.random() > 0.5 ? 1 : 0));
-									//this.roundMessage.values.set(j, 0);
-							this.sendMessage(roundMessage, i);
-						}
+					for (int i=1; i<this.clients.length; i++) {
+						if (this.faultLevel > 0)
+							for (int j=0; j<this.roundMessage.values.size(); j++)
+								this.roundMessage.values.set(j, (Math.random() > 0.5 ? 1 : 0));
+								//this.roundMessage.values.set(j, 0);
+						if ((this.faultLevel < 2) || (Math.random() > 0.5))
+							this.sendMessage(roundMessage.copy(), i);
 					}
 				roundMessage = new Message(round+1, this.clientID); // Reset message object for next round
 
@@ -67,10 +69,22 @@ public class Component extends RMIClient implements Runnable {
 				catch (InterruptedException e) { e.printStackTrace(); }
 
 				// Handle non-received messages
+				missingSenders = new ArrayList<Integer>();
+				for (int i=0; i<this.clients.length; i++)
+					if (!this.receivedFrom[i]) missingSenders.add(i); // Determine missing senders
+
+				if (!missingSenders.isEmpty()) {
+					if (missingSenders.get(0) == 0) { // Only occurs in first round!
+						System.out.println("I ("+this.clientID+") have forged non-received message from 0 [commander]");
+						this.HandleSubMsg(this.CreateNewRootPath(), Config.DEFAULT_VALUE); // This one is easy, just do as if we received the message and assume default value ;)
+					} else
+						this.data.HandleMissingMessages(this.roundMessage, CreateNewRootPath(), missingSenders); // Recursive function. Extends roundMessage.
+				}
 				//
 
 				// Prepare new round
 				for (int i=1; i<this.clients.length; i++) receivedFrom[i] = false;
+				receivedFrom[0] = true; // Commander does not participate anymore, so don't expect him to.
 			}
 			// Decide output
 			if (this.faultLevel == 0) System.out.println("I ("+this.clientID+") have decided on " + this.data.Decide());
