@@ -37,4 +37,11 @@ public class Message implements Serializable {
 		s += "]";
 		return(s);
 	}
+
+	public Message copy() {
+		Message newMsg = new Message(this.currentRound, this.sender);
+		newMsg.paths = (ArrayList<LinkedList<Integer>>)this.paths.clone();
+		newMsg.values = (ArrayList<Integer>)this.values.clone();
+		return(newMsg);
+	}
 }

@@ -44,6 +44,11 @@ public class DecisionTree {
 		return(DecisionTree.Majority(values));
 	}
 
+	// Recursive function te complete tree to current level
+	public void HandleMissingMessages(Message roundMessage, LinkedList<Integer> currentPath, ArrayList<Integer> missingSenders) {
+		
+	}
+
 	// Majority function
 	public static int Majority(ArrayList<Integer> a) {
 		int currentMax = 0;
