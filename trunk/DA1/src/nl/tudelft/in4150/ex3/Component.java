@@ -8,13 +8,13 @@ import java.util.ArrayList;
 
 public class Component extends RMIClient implements Runnable {
 	private DecisionTree data;
-	private int maxFaults;
+	public int maxFaults;
 
 	private int faultLevel;
 
 	// Vary per round
-	private Message roundMessage;
-	private int currentRound;
+	public Message roundMessage;
+	public int currentRound;
 	private boolean receivedFrom[];
 
 	/** Create a new client */
@@ -50,6 +50,7 @@ public class Component extends RMIClient implements Runnable {
 			receivedFrom[0] = false;
 			for (int i=1; i<this.clients.length; i++) receivedFrom[i] = true; // Prepare first round
 			for (int round = 0; round<=this.maxFaults; round++) {
+				System.out.println("I ("+this.clientID+") am executing round "+round+"...");
 				this.currentRound = round;
 
 				// Send messages
@@ -75,21 +76,20 @@ public class Component extends RMIClient implements Runnable {
 
 				if (!missingSenders.isEmpty()) {
 					if (missingSenders.get(0) == 0) { // Only occurs in first round!
-						System.out.println("I ("+this.clientID+") have forged non-received message from 0 [commander]");
+						if (Config.OUTPUT_DEBUGDATA > 0) System.out.println("I ("+this.clientID+") have forged non-received message from 0 [commander]");
 						this.HandleSubMsg(this.CreateNewRootPath(), Config.DEFAULT_VALUE); // This one is easy, just do as if we received the message and assume default value ;)
 					} else
-						this.data.HandleMissingMessages(this.roundMessage, CreateNewRootPath(), missingSenders); // Recursive function. Extends roundMessage.
+						this.data.HandleMissingMessages(this, this.data, CreateNewRootPath(), missingSenders); // Recursive function. Extends roundMessage.
 				}
-				//
 
 				// Prepare new round
 				for (int i=1; i<this.clients.length; i++) receivedFrom[i] = false;
 				receivedFrom[0] = true; // Commander does not participate anymore, so don't expect him to.
 			}
-			// Decide output
-			if (this.faultLevel == 0) System.out.println("I ("+this.clientID+") have decided on " + this.data.Decide());
-			else 											System.out.println("I am a faulty process so my decision does not matter =)");
 		}
+		// Decide output
+		if (this.faultLevel == 0) System.out.println("I ("+this.clientID+") have decided on " + this.data.Decide());
+		else 											System.out.println("I ("+this.clientID+") am a faulty process so my decision does not matter =)");
 	}
 
 	public LinkedList<Integer> CreateNewRootPath() {
@@ -113,13 +113,13 @@ public class Component extends RMIClient implements Runnable {
 	public synchronized void onMessageReceived(Message msg) {
 		//if (!msg.values.isEmpty()) // Ignore empty messages
 			if (msg.currentRound == this.currentRound) { // Check round = valid
-				System.out.println("I ("+this.clientID+") have received round "+this.currentRound+" message from "+msg.sender+"; "+msg.toString());
+				if (Config.OUTPUT_DEBUGDATA > 0) System.out.println("I ("+this.clientID+") have received round "+this.currentRound+" message from "+msg.sender+"; "+msg.toString());
 				this.receivedFrom[msg.sender] = true;
 
 				for (int i=0; i<msg.paths.size(); i++)
 					HandleSubMsg(msg.paths.get(i), msg.values.get(i));
 
-			} else System.out.println("I ("+this.clientID+") received OUT-OF-DATE (Now="+this.currentRound+",Msg="+msg.currentRound+") message from "+msg.sender+"; ignoring.");
+			} else if (Config.OUTPUT_DEBUGDATA > 0) System.out.println("I ("+this.clientID+") received OUT-OF-DATE (Now="+this.currentRound+",Msg="+msg.currentRound+") message from "+msg.sender+"; ignoring.");
 	}
 
 	/** Create multiple clients, based on configuration */

@@ -45,9 +45,35 @@ public class DecisionTree {
 	}
 
 	// Recursive function te complete tree to current level
-	public void HandleMissingMessages(Message roundMessage, LinkedList<Integer> currentPath, ArrayList<Integer> missingSenders) {
-		
+	public static void HandleMissingMessages(Component caller, DecisionTree treeNode, LinkedList<Integer> currentPath, ArrayList<Integer> missingSenders) {
+		LinkedList<Integer> copyPath;
+		if (!treeNode.children.isEmpty()) { // This shouldn't be necessary, but just in case.
+			if (treeNode.children.get(0).children.isEmpty()) {
+				// Insert child to this node.
+				//HandleMissingMessages_(roundMessage, treeNode, currentPath)
+				for(Integer missingSender : missingSenders) {
+					if (Config.OUTPUT_DEBUGDATA > 0) System.out.println("I ("+caller.clientID+") have forged non-received message from "+missingSender);
+					treeNode.children.add(new DecisionTree(missingSender, Config.DEFAULT_VALUE));
+					copyPath = new LinkedList<Integer>(currentPath);
+					copyPath.add(missingSender);
+					if (caller.currentRound < caller.maxFaults && !currentPath.contains(caller.clientID)) {
+						copyPath.add(caller.clientID);
+						caller.roundMessage.AddSubMsg(copyPath, Config.DEFAULT_VALUE);
+					}
+				}
+			} else {
+				// Recurse because we haven't reached desired depth level yet
+				for(DecisionTree currentChild : treeNode.children) {
+					copyPath = new LinkedList<Integer>(currentPath);
+					copyPath.add(currentChild.node);
+					HandleMissingMessages(caller, currentChild, copyPath, missingSenders);
+				}
+			}
+		} else {
+			if (Config.OUTPUT_DEBUGDATA > 0) System.out.println("Uhh, this is strange?");
+		}
 	}
+	//public static void HandleMissingMessages_(Message roundMessage, DecisionTree treeNode, LinkedList<Integer> currentPath, ArrayList<Integer> missingSenders) {}
 
 	// Majority function
 	public static int Majority(ArrayList<Integer> a) {
