@@ -90,6 +90,11 @@ public class Component extends RMIClient implements Runnable {
 		// Decide output
 		if (this.faultLevel == 0) System.out.println("I ("+this.clientID+") have decided on " + this.data.Decide());
 		else 											System.out.println("I ("+this.clientID+") am a faulty process so my decision does not matter =)");
+
+		if(Config.OUTPUT_DEBUGDATA > 0 && this.clientID == Config.CLIENT_ID[Config.CLIENT_ID.length-1]) {
+			System.out.println("Number of messages sent: " + Config.SENT_MESSAGES);
+			System.out.println("Number of messages received: " + Config.RECEIVED_MESSAGES);
+		}
 	}
 
 	public LinkedList<Integer> CreateNewRootPath() {
@@ -112,6 +117,7 @@ public class Component extends RMIClient implements Runnable {
 	/** Code executed by the lieutenant */
 	public synchronized void onMessageReceived(Message msg) {
 		//if (!msg.values.isEmpty()) // Ignore empty messages
+			Config.RECEIVED_MESSAGES++;
 			if (msg.currentRound == this.currentRound) { // Check round = valid
 				if (Config.OUTPUT_DEBUGDATA > 0) System.out.println("I ("+this.clientID+") have received round "+this.currentRound+" message from "+msg.sender+"; "+msg.toString());
 				this.receivedFrom[msg.sender] = true;
@@ -124,6 +130,13 @@ public class Component extends RMIClient implements Runnable {
 
 	/** Create multiple clients, based on configuration */
 	public static void main(String[] args) {
+
+		/*
+		for(int i=0;i<Config.CLIENT_ID.length;i++) {
+				Config.CLIENT_ID[i] = i+1;
+				Config.FL[i] = 0;
+		} */
+
 		if (args.length > 0) { // Multi process version. 1st param: my ID. 2nd param: registry server. 3rd param: client count. 4th param: max_faults. 5th param: fault_level. 6th param: sleep interval at start. 7th param: am I registry?
 			try {
 				if (args[7].equals("true")) initializeRMI(Config.REGISTRY_PORT);
