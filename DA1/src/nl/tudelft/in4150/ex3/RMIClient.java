@@ -53,8 +53,8 @@ public abstract class RMIClient extends UnicastRemoteObject implements IReceiver
 	/** Sends a message object to client with integer ID receiverID. */
 	public void sendMessage(Message msg, int receiverID) {
 		//Config.SENT_MESSAGES++;
-		/** We could directly call receiveMessage through RMI here, but if we extend it with random delays, the whole thread is delayed (blocking). */
-		try { new RandomDelayedTransfer(msg, (IReceiver) this.registry.lookup(createName(receiverID))); }
+		try { new RandomDelayedTransfer(msg, (IReceiver) this.registry.lookup(createName(receiverID))); } // Asynchronous
+		//try { ((IReceiver)this.registry.lookup(createName(receiverID))).receiveMessage(msg); } // Synchronous
 		catch (Exception e) { e.printStackTrace(); }
 	}
 

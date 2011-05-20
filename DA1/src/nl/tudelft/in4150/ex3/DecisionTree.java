@@ -3,12 +3,12 @@ package nl.tudelft.in4150.ex3;
 import java.util.LinkedList;
 import java.util.ArrayList;
 
-public class DecisionTree {
-	public int node;	// Process ID
-	public int value; // Value received along path
-	public int level; // Current level
-	public DecisionTree parent;
-	public ArrayList<DecisionTree> children;
+public class DecisionTree implements DecisionObject {
+	private int node;	// Process ID
+	private int value; // Value received along path
+	private int level; // Current level
+	private DecisionTree parent;
+	private ArrayList<DecisionTree> children;
 
 	// Creates a new node.
 	public DecisionTree(int node, int value) {
@@ -31,7 +31,6 @@ public class DecisionTree {
 
 		int currentNode = path.removeFirst();
 		DecisionTree currentLeaf = this;
-		DecisionTree currentParent = null;
 		assert(this.node == currentNode);
 
 		while (!path.isEmpty()) {
@@ -53,52 +52,6 @@ public class DecisionTree {
 			values.add(child.Decide());
 		return(DecisionTree.Majority(values));
 	}
-
-	// Recursive function te complete tree to current level
-	/*
-	public static void HandleMissingMessages(Component caller, DecisionTree treeNode, LinkedList<Integer> currentPath, ArrayList<Integer> missingSenders) {
-		LinkedList<Integer> copyPath;
-		if (!treeNode.children.isEmpty()) { // This shouldn't be necessary, but just in case.
-			if (currentPath.size() == caller.currentRound) {
-				// Insert child to this node.
-				for(Integer missingSender : missingSenders) {
-					if (Config.OUTPUT_DEBUGDATA > -1) System.out.println("I ("+caller.clientID+") have forged non-received message from "+missingSender);
-					copyPath = new LinkedList<Integer>(currentPath);
-					copyPath.add(missingSender);
-					treeNode.children.add(new DecisionTree(missingSender, Config.DEFAULT_VALUE, copyPath.size()-1, treeNode));
-					if (caller.currentRound < caller.maxFaults && !currentPath.contains(caller.clientID)) {
-						copyPath.add(caller.clientID);
-						caller.roundMessage.AddSubMsg(copyPath, Config.DEFAULT_VALUE);
-					}
-				}
-			} else {
-				// Recurse because we haven't reached desired depth level yet
-				for(DecisionTree currentChild : treeNode.children) {
-					copyPath = new LinkedList<Integer>(currentPath);
-					copyPath.add(currentChild.node);
-					HandleMissingMessages(caller, currentChild, copyPath, missingSenders);
-				}
-			}
-		} else {
-			if (Config.OUTPUT_DEBUGDATA > -1) {
-				String x;
-				x =(" -- Start afscheidsbrief --");
-				x+=("\nUhh, this is strange?");
-				x+=("\nI am "+caller.clientID);
-				x+=("\nMy current round is "+caller.currentRound);
-				x+=("\nMy root node is "+caller.data.node);
-				x+=("\nMy current tree node is "+treeNode.node);
-				x+=("\nMy current path in tree is "+currentPath);
-				x+=("\nAnd my current tree node doesn't seem to have children, which it is supposed to.");
-				x+=("\n -- Bye bye..... * slits throat * --");
-				x+=("\nPS (Post Suicide): my data tree was like.."+caller.data);
-				System.out.println(x);
-				System.exit(1);
-			}
-		}
-	}
-	*/
-	//public static void HandleMissingMessages_(Message roundMessage, DecisionTree treeNode, LinkedList<Integer> currentPath, ArrayList<Integer> missingSenders) {}
 
 	// Majority function
 	public static int Majority(ArrayList<Integer> a) {

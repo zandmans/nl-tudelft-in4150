@@ -7,12 +7,44 @@ import java.util.LinkedList;
 import java.util.ArrayList;
 
 public class Component extends RMIClient implements Runnable {
-	// Properties
-	private int maxFaults;
-	private int faultLevel;
-	private int initSleep;
+	private class threadHandleMissingMessages implements Runnable {
+		Component caller;
+		public threadHandleMissingMessages(Component caller) { this.caller = caller; }
+		public void run() {
+			for (LinkedList<Integer> missingMessage : this.caller.getMissingMessages()) {
+				if (Config.OUTPUT_MISSING_MESSAGES) System.out.println("I ("+this.caller.clientID+") did not receive message "+FormatMessagePath(missingMessage));
+				this.caller.HandleSubMsg(missingMessage, Config.DEFAULT_VALUE);
+			}
+		}
+	}
 
-	private DecisionTree data;
+	private class threadSendMessages implements Runnable {
+		Component caller;
+		Message roundMessage;
+		public threadSendMessages(Component caller) {
+			this.caller = caller;
+			if (caller.roundMessage != null)
+				this.roundMessage = caller.roundMessage.copy();
+		}
+		public void run() {
+			if (this.roundMessage != null) // Do not send messages in round 0 if we aren't the commander
+				for (int i=1; i<caller.clients.length; i++) {
+					if (caller.faultLevel > 0) // Try to corrupt messages
+						for (int j=0; j<this.roundMessage.values.size(); j++)
+							this.roundMessage.values.set(j, (Math.random() > 0.5 ? 1 : 0));
+							//this.roundMessage.values.set(j, 0);
+					if ((caller.faultLevel < 2) || (Math.random() > 0.5)) // Try to drop messages
+						caller.sendMessage(roundMessage.copy(), i);
+				}
+		}
+	}
+
+	// Properties
+	private int maxFaults;		// Algorithm property.
+	private int faultLevel;		// How Byzantine am I? ;) 0=Loyal, 1=Corrupting, 2=Corrupting and dropping messages
+	private int initSleep;		// Initial time to sleep before we start to execute. Used to wait for all clients to register to RMI.
+
+	protected DecisionObject data;
 
 	// Vary per round
 	private Message roundMessage;
@@ -24,7 +56,8 @@ public class Component extends RMIClient implements Runnable {
 	public Component(int clientID, String registryServer, int[] clients, int maxFaults, int faultLevel, int initSleep) throws java.rmi.RemoteException {
 		super(clientID, registryServer, clients);
 
-		this.data = null;
+		//this.data = null; // Tree variant
+		this.data = new DecisionMap(maxFaults, clients.length);
 		this.faultLevel = faultLevel;
 		this.initSleep = initSleep;
 		this.currentRound = 0;
@@ -32,10 +65,9 @@ public class Component extends RMIClient implements Runnable {
 
 		expectedCurrent = new ArrayList<LinkedList<Integer>>();
 		expectedNextRound = new ArrayList<LinkedList<Integer>>();
-
-		new Thread(this).start();
 	}
 
+	// Helper functions
 	public LinkedList<Integer> CreateNewRootPath() { LinkedList<Integer> path = new LinkedList<Integer>(); path.add(0); return(path); }
 	public String FormatMessagePath(LinkedList<Integer> path) { LinkedList<Integer> pathCopy = (LinkedList<Integer>)path.clone(); String out = "["+pathCopy.removeFirst(); while (!pathCopy.isEmpty()) out += "-"+pathCopy.removeFirst(); return(out+"]"); }
 
@@ -45,8 +77,6 @@ public class Component extends RMIClient implements Runnable {
 	private synchronized void nextExpectedRound() { this.expectedCurrent = this.expectedNextRound; this.expectedNextRound = new ArrayList<LinkedList<Integer>>(); }
 
 	public void run() {
-		ArrayList<LinkedList<Integer>> missing;
-
 		try { Thread.sleep(this.initSleep); } // Wait for everyones initialization.
 		catch (InterruptedException e) { e.printStackTrace(); }
 
@@ -58,7 +88,9 @@ public class Component extends RMIClient implements Runnable {
 				msg = new Message(0, 0); msg.AddSubMsg(path, value);
 				if ((this.faultLevel < 2) || (Math.random() > 0.5)) this.sendMessage(msg, i);
 			}
-			data = new DecisionTree(this.clientID, value);
+			//data = new DecisionTree(this.clientID, value); // Overbodig.
+			if (this.faultLevel == 0) System.out.println("I (the commander) told everyone to decide on " + value);
+			else 											System.out.println("I (the commander) am a faulty process so my decision does not matter =)");
 		} else { // Lieutenant stuff
 			// Messages we expect in round 0; intialization.
 			this.addExpectedNextRound(CreateNewRootPath());
@@ -66,40 +98,33 @@ public class Component extends RMIClient implements Runnable {
 
 			for (int round = 0; round<=this.maxFaults; round++) {
 				this.currentRound = round;
-				System.out.println("I ("+this.clientID+") am executing round "+round+"...");
+				if (this.clientID == 1) System.out.println("Executing round "+round+"...");
 
-				// Send messages. Do not send messages in round 0 if we aren't the commander
-				if (this.roundMessage != null)
-					for (int i=1; i<this.clients.length; i++) {
-						if (this.faultLevel > 0) // Try to corrupt messages
-							for (int j=0; j<this.roundMessage.values.size(); j++)
-								this.roundMessage.values.set(j, (Math.random() > 0.5 ? 1 : 0));
-								//this.roundMessage.values.set(j, 0);
-						if ((this.faultLevel < 2) || (Math.random() > 0.5)) // Try to drop messages
-							this.sendMessage(roundMessage.copy(), i);
-					}
+				// Send messages.
+				(new Thread(new threadSendMessages(this))).start();
+				roundMessage = new Message(round+1, this.clientID); // Reset message object for next round.
 
-				// Reset message object for next round.
-				roundMessage = new Message(round+1, this.clientID);
-
-				// Sleep for round time
-				try { Thread.sleep(Config.ROUND_TIME); }
+				// Sleep for 80% of round time
+				try { Thread.sleep(Config.ROUND_TIME_A[round]); }
 				catch (InterruptedException e) { e.printStackTrace(); }
 
 				// Handle non-received messages
-				missing = this.getMissingMessages();
-				for (LinkedList<Integer> missingMessage : missing) {
-					if (Config.OUTPUT_MISSING_MESSAGES) System.out.println("I ("+this.clientID+") did not receive message "+FormatMessagePath(missingMessage));
-					this.HandleSubMsg(missingMessage, Config.DEFAULT_VALUE);
-				}
+				(new Thread(new threadHandleMissingMessages(this))).start();
+
+				// Sleep for 20% of round time
+				try { Thread.sleep(Config.ROUND_TIME_B[round]); }
+				catch (InterruptedException e) { e.printStackTrace(); }
+
 				this.nextExpectedRound();
 			}
-		}
-		// Decide output
-		if (this.faultLevel == 0) System.out.println("I ("+this.clientID+") have decided on " + this.data.Decide());
-		else 											System.out.println("I ("+this.clientID+") am a faulty process so my decision does not matter =)");
 
-		//System.out.println(this.data);
+			// Decide output
+			this.currentRound++; // So all possibly out-of-date messages are regarded as out-of-date =)
+			if (this.faultLevel == 0) System.out.println("I ("+this.clientID+") have decided on " + this.data.Decide());
+			else 											System.out.println("I ("+this.clientID+") am a faulty process so my decision does not matter =)");
+
+			//System.out.println(this.data);
+		}
 
 		/*
 		if(Config.OUTPUT_DEBUGDATA > 0 && this.clientID == Config.CLIENT_ID[Config.CLIENT_ID.length-1]) {
@@ -114,8 +139,9 @@ public class Component extends RMIClient implements Runnable {
 		LinkedList<Integer> newPath;
 
 		// Add information to DecisionTree
-		if (path.size() == 1) this.data = new DecisionTree(path.get(0), value);
-		else this.data.AddNewNode(path, value);
+		//if (path.size() == 1) this.data = new DecisionTree(path.get(0), value);
+		//else this.data.AddNewNode(path, value);
+		this.data.AddNewNode(path, value);
 
 		// If we have another round to go, determine expected messages based on this one, and additionally add our own message to roundMessage object.
 		if (this.currentRound < this.maxFaults) {
@@ -156,6 +182,7 @@ public class Component extends RMIClient implements Runnable {
 
 				int[] clients = new int[Integer.parseInt(args[2])]; for (int i=0; i<clients.length; i++) clients[i] = i;
 				Component me = new Component(Integer.parseInt(args[0]), args[1], clients, Integer.parseInt(args[3]), Integer.parseInt(args[4]), Integer.parseInt(args[5]));
+				new Thread(me).start();
 			} catch (Exception e) { e.printStackTrace(); }
 		} else { // Standard configuration in 1 process.
 			initializeRMI(Config.REGISTRY_PORT);
@@ -165,6 +192,8 @@ public class Component extends RMIClient implements Runnable {
 			try {
 				for (int i = 0; i < Config.CLIENT_ID.length; ++i)
 					comps[i] = new Component(Config.CLIENT_ID[i], "localhost", Config.CLIENT_ID, Config.FAULTS, Config.FL[i], 1000);
+				for (int i = 0; i < Config.CLIENT_ID.length; ++i)
+					new Thread(comps[i]).start();
 			} catch (Exception e) { e.printStackTrace(); }
 		}
 	}
