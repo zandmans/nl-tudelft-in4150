@@ -33,8 +33,10 @@ public class Component extends RMIClient implements Runnable {
 						for (int j=0; j<this.roundMessage.values.size(); j++)
 							this.roundMessage.values.set(j, (Math.random() > 0.5 ? 1 : 0));
 							//this.roundMessage.values.set(j, 0);
-					if ((caller.faultLevel < 2) || (Math.random() > 0.5)) // Try to drop messages
+					if ((caller.faultLevel < 2) || (Math.random() > 0.5)) { // Try to drop messages
 						caller.sendMessage(roundMessage.copy(), i);
+						Config.SENT_MESSAGES[caller.clientID] += roundMessage.values.size();
+					}
 				}
 		}
 	}
@@ -80,13 +82,18 @@ public class Component extends RMIClient implements Runnable {
 		try { Thread.sleep(this.initSleep); } // Wait for everyones initialization.
 		catch (InterruptedException e) { e.printStackTrace(); }
 
+		//System.out.println("I started at "+System.currentTimeMillis());
+
 		if (this.clientID == 0) { // Commander stuff
 			LinkedList<Integer> path = CreateNewRootPath();
 			int value = 1; Message msg;
 			for (int i=1; i<this.clients.length; i++) {
 				if (this.faultLevel > 0) value = (Math.random() > 0.5 ? 1 : 0);
 				msg = new Message(0, 0); msg.AddSubMsg(path, value);
-				if ((this.faultLevel < 2) || (Math.random() > 0.5)) this.sendMessage(msg, i);
+				if ((this.faultLevel < 2) || (Math.random() > 0.5)) {
+					this.sendMessage(msg, i);
+					Config.SENT_MESSAGES[this.clientID] += msg.values.size();
+				}
 			}
 			//data = new DecisionTree(this.clientID, value); // Overbodig.
 			if (this.faultLevel == 0) System.out.println("I (the commander) told everyone to decide on " + value);
@@ -111,7 +118,7 @@ public class Component extends RMIClient implements Runnable {
 				// Handle non-received messages
 				(new Thread(new threadHandleMissingMessages(this))).start();
 
-				// Sleep for 20% of round time
+				// Sleep for 20%/2 of round time
 				try { Thread.sleep(Config.ROUND_TIME_B[round]); }
 				catch (InterruptedException e) { e.printStackTrace(); }
 
@@ -126,11 +133,14 @@ public class Component extends RMIClient implements Runnable {
 			//System.out.println(this.data);
 		}
 
-		/*
-		if(Config.OUTPUT_DEBUGDATA > 0 && this.clientID == Config.CLIENT_ID[Config.CLIENT_ID.length-1]) {
-			System.out.println("Number of messages sent: " + Config.SENT_MESSAGES);
-			System.out.println("Number of messages received: " + Config.RECEIVED_MESSAGES);
-		}*/
+		if(Config.OUTPUT_MESSAGE_COUNTS_INDIV) System.out.println(" I ("+this.clientID+")have sent " + Config.SENT_MESSAGES[this.clientID] + " and received "+Config.RECEIVED_MESSAGES[this.clientID]+" messages.");
+		if(Config.OUTPUT_MESSAGE_COUNTS_SUM && this.clientID == 1) {
+			int s=0, r=0;
+			for (int i = 0; i<this.clients.length; i++) {
+				s += Config.SENT_MESSAGES[i];
+				r += Config.RECEIVED_MESSAGES[i];
+			} System.out.println("Total sent: "+s+" and received: "+r);
+		}
 	}
 
 
@@ -160,11 +170,11 @@ public class Component extends RMIClient implements Runnable {
 	public synchronized void onMessageReceived(Message msg) {
 		LinkedList<Integer> path;
 		if (this.clientID > 0) { // Somehow, we receive a message as commander, which is not send from this application..
-			//Config.RECEIVED_MESSAGES++;
 			if (msg.currentRound == this.currentRound) { // Check round = valid
 				if (Config.OUTPUT_RECEIVED_MESSAGES) System.out.println("I ("+this.clientID+") have received round "+this.currentRound+" message from "+msg.sender+"; "+msg.toString());
 
-				for (int i=0; i<msg.paths.size(); i++) { // Handle all sub-messages packed in roundMessage object.
+				Config.RECEIVED_MESSAGES[this.clientID] += msg.values.size();
+				for (int i=0; i<msg.values.size(); i++) { // Handle all sub-messages packed in roundMessage object.
 					path = msg.paths.get(i);
 					this.removeExpectedCurrent(path); // Remove message from expected messages because we did actually receive it :)
 					this.HandleSubMsg(path, msg.values.get(i));
